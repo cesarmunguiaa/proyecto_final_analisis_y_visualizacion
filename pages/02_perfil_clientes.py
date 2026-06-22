@@ -2,20 +2,21 @@ import plotly.express as px
 import streamlit as st
 
 from pages.common import (
-    COLORS,
-    empty_guard,
-    format_mu,
-    load_data,
-    multiselect_filter,
-    page_header,
-    range_filter,
-    show_figure,
+    COLORES,
+    validar_no_vacio,
+    formatear_mu,
+    cargar_datos,
+    filtro_multiseleccion,
+    encabezado_pagina,
+    filtro_rango,
+    mostrar_figura,
+    mostrar_metricas,
 )
 
 
-data = load_data()
+datos = cargar_datos()
 
-page_header(
+encabezado_pagina(
     "Perfil de clientes",
     "¿Quiénes conforman la base de clientes?",
     "Las variables sociodemográficas permiten contextualizar la cartera. Se muestran como "
@@ -23,126 +24,135 @@ page_header(
 )
 
 st.sidebar.markdown("### Filtros de perfil")
-filtered = range_filter(data, "Age", "Edad", "profile_age", integer=True)
-filtered = multiselect_filter(filtered, "Education", "Nivel educativo", "profile_education")
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_rango(datos, "Age", "Edad", "perfil_edad", entero=True)
+filtrados = filtro_multiseleccion(filtrados, "Education", "Nivel educativo", "perfil_educacion")
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Marital_Status_Grouped",
     "Estado civil agrupado",
-    "profile_marital",
+    "perfil_estado_civil",
 )
-filtered = range_filter(filtered, "Income", "Rango de ingreso (MU)", "profile_income")
-filtered = range_filter(
-    filtered,
+filtrados = filtro_rango(filtrados, "Income", "Rango de ingreso (MU)", "perfil_ingreso")
+filtrados = filtro_rango(
+    filtrados,
     "Total_Dependents",
     "Número de dependientes",
-    "profile_dependents",
-    integer=True,
+    "perfil_dependientes",
+    entero=True,
 )
-filtered = multiselect_filter(
-    filtered, "Family_Segment", "Segmento familiar", "profile_family"
+filtrados = filtro_multiseleccion(
+    filtrados, "Family_Segment", "Segmento familiar", "perfil_familia"
 )
-empty_guard(filtered)
+validar_no_vacio(filtrados)
 
-metrics = st.columns(5)
-metrics[0].metric("Clientes", f"{len(filtered):,}")
-metrics[1].metric("Edad promedio", f"{filtered['Age'].mean():.1f} años")
-metrics[2].metric("Edad mediana", f"{filtered['Age'].median():.0f} años")
-metrics[3].metric("Ingreso promedio", format_mu(filtered["Income"].mean(), 0))
-metrics[4].metric("Dependientes promedio", f"{filtered['Total_Dependents'].mean():.2f}")
+mostrar_metricas(
+    [
+        {"titulo": "Clientes", "valor": f"{len(filtrados):,}"},
+        {"titulo": "Edad promedio", "valor": f"{filtrados['Age'].mean():.1f} años"},
+        {"titulo": "Edad mediana", "valor": f"{filtrados['Age'].median():.0f} años"},
+        {
+            "titulo": "Ingreso promedio",
+            "valor": formatear_mu(filtrados["Income"].mean(), 0),
+        },
+        {
+            "titulo": "Dependientes promedio",
+            "valor": f"{filtrados['Total_Dependents'].mean():.2f}",
+        },
+    ]
+)
 
-left, right = st.columns([1.15, 1])
-with left:
-    age_fig = px.histogram(
-        filtered,
+izquierda, derecha = st.columns([1.15, 1])
+with izquierda:
+    figura_edades = px.histogram(
+        filtrados,
         x="Age",
         nbins=24,
-        color_discrete_sequence=[COLORS["primary"]],
+        color_discrete_sequence=[COLORES["primario"]],
         title="Distribución de edad histórica",
         labels={"Age": "Edad", "count": "Clientes"},
     )
-    age_fig.update_layout(bargap=0.05)
-    show_figure(age_fig)
+    figura_edades.update_layout(bargap=0.05)
+    mostrar_figura(figura_edades)
 
-with right:
-    education_counts = (
-        filtered["Education"].value_counts().rename_axis("Educación").reset_index(name="Clientes")
+with derecha:
+    conteo_educacion = (
+        filtrados["Education"].value_counts().rename_axis("Educación").reset_index(name="Clientes")
     )
-    education_fig = px.bar(
-        education_counts.sort_values("Clientes"),
+    figura_educacion = px.bar(
+        conteo_educacion.sort_values("Clientes"),
         x="Clientes",
         y="Educación",
         orientation="h",
         text_auto=",",
-        color_discrete_sequence=[COLORS["secondary"]],
+        color_discrete_sequence=[COLORES["secundario"]],
         title="Composición por nivel educativo",
     )
-    show_figure(education_fig)
+    mostrar_figura(figura_educacion)
 
-left, right = st.columns(2)
-with left:
-    marital_counts = (
-        filtered["Marital_Status_Grouped"]
+izquierda, derecha = st.columns(2)
+with izquierda:
+    conteo_estado_civil = (
+        filtrados["Marital_Status_Grouped"]
         .value_counts()
         .rename_axis("Estado civil")
         .reset_index(name="Clientes")
     )
-    marital_fig = px.bar(
-        marital_counts,
+    figura_estado_civil = px.bar(
+        conteo_estado_civil,
         x="Estado civil",
         y="Clientes",
         text_auto=",",
         color="Estado civil",
-        color_discrete_sequence=[COLORS["primary"], COLORS["secondary"], COLORS["accent"]],
+        color_discrete_sequence=[COLORES["primario"], COLORES["secundario"], COLORES["acento"]],
         title="Estado civil reportado",
     )
-    marital_fig.update_layout(showlegend=False)
-    show_figure(marital_fig)
+    figura_estado_civil.update_layout(showlegend=False)
+    mostrar_figura(figura_estado_civil)
 
-with right:
-    dependent_counts = (
-        filtered["Dependent_Composition"]
+with derecha:
+    conteo_dependientes = (
+        filtrados["Dependent_Composition"]
         .value_counts()
         .rename_axis("Composición")
         .reset_index(name="Clientes")
     )
-    dependent_fig = px.pie(
-        dependent_counts,
+    figura_dependientes = px.pie(
+        conteo_dependientes,
         names="Composición",
         values="Clientes",
         hole=0.58,
         color_discrete_sequence=["#7A243A", "#176B87", "#D18B47", "#769F8D"],
         title="Composición de dependientes",
     )
-    dependent_fig.update_traces(textposition="inside", textinfo="percent")
-    show_figure(dependent_fig, legend_horizontal=True)
+    figura_dependientes.update_traces(textposition="inside", textinfo="percent")
+    mostrar_figura(figura_dependientes, leyenda_horizontal=True)
 
 st.subheader("Ingreso por grupos sociodemográficos")
-left, right = st.columns(2)
-with left:
-    income_education = px.box(
-        filtered,
+izquierda, derecha = st.columns(2)
+with izquierda:
+    ingreso_educacion = px.box(
+        filtrados,
         x="Education",
         y="Income",
         points=False,
-        color_discrete_sequence=[COLORS["secondary"]],
+        color_discrete_sequence=[COLORES["secundario"]],
         title="Ingreso por educación",
         labels={"Education": "Educación", "Income": "Ingreso (MU)"},
     )
-    show_figure(income_education)
+    mostrar_figura(ingreso_educacion)
 
-with right:
-    income_family = px.box(
-        filtered,
+with derecha:
+    ingreso_familia = px.box(
+        filtrados,
         x="Family_Segment",
         y="Income",
         points=False,
-        color_discrete_sequence=[COLORS["primary"]],
+        color_discrete_sequence=[COLORES["primario"]],
         title="Ingreso por segmento familiar",
         labels={"Family_Segment": "Segmento familiar", "Income": "Ingreso (MU)"},
     )
-    income_family.update_xaxes(tickangle=-15)
-    show_figure(income_family)
+    ingreso_familia.update_xaxes(tickangle=-15)
+    mostrar_figura(ingreso_familia)
 
 st.caption(
     "La edad se calcula con respecto al 29 de junio de 2014, fecha máxima observada en "

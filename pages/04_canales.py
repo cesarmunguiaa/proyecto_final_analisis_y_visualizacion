@@ -4,23 +4,24 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from pages.common import (
-    CHANNEL_COLUMNS,
-    COLORS,
-    empty_guard,
-    format_mu,
-    format_pct,
-    load_data,
-    multiselect_filter,
-    page_header,
-    range_filter,
-    response_filter,
-    show_figure,
+    COLUMNAS_CANALES,
+    COLORES,
+    validar_no_vacio,
+    formatear_mu,
+    formatear_porcentaje,
+    cargar_datos,
+    filtro_multiseleccion,
+    encabezado_pagina,
+    filtro_rango,
+    filtro_respuesta,
+    mostrar_figura,
+    mostrar_metricas,
 )
 
 
-data = load_data()
+datos = cargar_datos()
 
-page_header(
+encabezado_pagina(
     "Canales y comportamiento de compra",
     "¿Por dónde compran los clientes y qué canales concentran mayor valor?",
     "Los canales describen cómo se relaciona cada cliente con la empresa. Esta página separa "
@@ -28,76 +29,91 @@ page_header(
 )
 
 st.sidebar.markdown("### Filtros de canales")
-filtered = multiselect_filter(data, "Dominant_Channel", "Canal dominante", "channel_main")
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_multiseleccion(datos, "Dominant_Channel", "Canal dominante", "canal_principal")
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Spending_Segment",
     "Segmento de gasto",
-    "channel_spending",
+    "canal_gasto",
     ["Gasto bajo", "Gasto medio-bajo", "Gasto medio-alto", "Gasto alto"],
 )
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Income_Segment",
     "Segmento de ingreso",
-    "channel_income",
+    "canal_ingreso",
     ["Ingreso bajo", "Ingreso medio", "Ingreso alto"],
 )
-filtered = range_filter(
-    filtered,
+filtrados = filtro_rango(
+    filtrados,
     "NumDealsPurchases",
     "Compras con descuento",
-    "channel_deals",
-    integer=True,
+    "canal_descuentos",
+    entero=True,
 )
-filtered = range_filter(
-    filtered,
+filtrados = filtro_rango(
+    filtrados,
     "NumWebVisitsMonth",
     "Visitas web mensuales",
-    "channel_visits",
-    integer=True,
+    "canal_visitas",
+    entero=True,
 )
-filtered = multiselect_filter(
-    filtered, "Dominant_Category", "Categoría dominante", "channel_category"
+filtrados = filtro_multiseleccion(
+    filtrados, "Dominant_Category", "Categoría dominante", "canal_categoria"
 )
-filtered = response_filter(filtered, "channel_response")
-empty_guard(filtered)
+filtrados = filtro_respuesta(filtrados, "canal_respuesta")
+validar_no_vacio(filtrados)
 
-metrics = st.columns(6)
-metrics[0].metric("Compras web", f"{filtered['NumWebPurchases'].mean():.2f}")
-metrics[1].metric("Compras catálogo", f"{filtered['NumCatalogPurchases'].mean():.2f}")
-metrics[2].metric("Compras tienda", f"{filtered['NumStorePurchases'].mean():.2f}")
-metrics[3].metric("Visitas web", f"{filtered['NumWebVisitsMonth'].mean():.2f}")
-metrics[4].metric("Compras con descuento", f"{filtered['NumDealsPurchases'].mean():.2f}")
-metrics[5].metric(
-    "Clientes multicanal",
-    format_pct(filtered["Channel_Segment"].eq("Multicanal").mean() * 100, 1),
+mostrar_metricas(
+    [
+        {"titulo": "Compras web", "valor": f"{filtrados['NumWebPurchases'].mean():.2f}"},
+        {
+            "titulo": "Compras catálogo",
+            "valor": f"{filtrados['NumCatalogPurchases'].mean():.2f}",
+        },
+        {
+            "titulo": "Compras tienda",
+            "valor": f"{filtrados['NumStorePurchases'].mean():.2f}",
+        },
+        {"titulo": "Visitas web", "valor": f"{filtrados['NumWebVisitsMonth'].mean():.2f}"},
+        {
+            "titulo": "Compras con descuento",
+            "valor": f"{filtrados['NumDealsPurchases'].mean():.2f}",
+        },
+        {
+            "titulo": "Clientes multicanal",
+            "valor": formatear_porcentaje(
+                filtrados["Channel_Segment"].eq("Multicanal").mean() * 100,
+                1,
+            ),
+        },
+    ]
 )
 
-channel_average = pd.DataFrame(
+promedio_canales = pd.DataFrame(
     {
-        "Canal": list(CHANNEL_COLUMNS.values()),
-        "Compras promedio": [filtered[column].mean() for column in CHANNEL_COLUMNS],
+        "Canal": list(COLUMNAS_CANALES.values()),
+        "Compras promedio": [filtrados[columna].mean() for columna in COLUMNAS_CANALES],
     }
 )
-left, right = st.columns(2)
-with left:
-    channel_bar = px.bar(
-        channel_average,
+izquierda, derecha = st.columns(2)
+with izquierda:
+    barras_canales = px.bar(
+        promedio_canales,
         x="Canal",
         y="Compras promedio",
         color="Canal",
         text="Compras promedio",
-        color_discrete_sequence=[COLORS["secondary"], COLORS["accent"], COLORS["primary"]],
+        color_discrete_sequence=[COLORES["secundario"], COLORES["acento"], COLORES["primario"]],
         title="Compras promedio por canal",
     )
-    channel_bar.update_traces(texttemplate="%{text:.2f}", textposition="outside")
-    channel_bar.update_layout(showlegend=False)
-    show_figure(channel_bar)
+    barras_canales.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+    barras_canales.update_layout(showlegend=False)
+    mostrar_figura(barras_canales)
 
-with right:
-    spend_channel = px.box(
-        filtered,
+with derecha:
+    gasto_canal = px.box(
+        filtrados,
         x="Dominant_Channel",
         y="Total_Spending",
         color="Dominant_Channel",
@@ -105,13 +121,13 @@ with right:
         title="Gasto por canal dominante",
         labels={"Dominant_Channel": "Canal", "Total_Spending": "Gasto total (MU)"},
     )
-    spend_channel.update_layout(showlegend=False)
-    show_figure(spend_channel)
+    gasto_canal.update_layout(showlegend=False)
+    mostrar_figura(gasto_canal)
 
-left, right = st.columns(2)
-with left:
-    web_scatter = px.scatter(
-        filtered,
+izquierda, derecha = st.columns(2)
+with izquierda:
+    dispersion_web = px.scatter(
+        filtrados,
         x="NumWebVisitsMonth",
         y="NumWebPurchases",
         color="Spending_Segment",
@@ -123,16 +139,16 @@ with left:
             "Spending_Segment": "Gasto",
         },
     )
-    show_figure(web_scatter, legend_horizontal=True)
+    mostrar_figura(dispersion_web, leyenda_horizontal=True)
 
-with right:
-    catalog_scatter = px.scatter(
-        filtered,
+with derecha:
+    dispersion_catalogo = px.scatter(
+        filtrados,
         x="NumCatalogPurchases",
         y="Total_Spending",
         color="Value_Segment",
         opacity=0.55,
-        color_discrete_map={"Alto valor": COLORS["primary"], "Resto": "#AAB6BF"},
+        color_discrete_map={"Alto valor": COLORES["primario"], "Resto": "#AAB6BF"},
         title="Compras por catálogo y gasto total",
         labels={
             "NumCatalogPurchases": "Compras por catálogo",
@@ -140,48 +156,48 @@ with right:
             "Value_Segment": "Valor",
         },
     )
-    show_figure(catalog_scatter, legend_horizontal=True)
+    mostrar_figura(dispersion_catalogo, leyenda_horizontal=True)
 
-left, right = st.columns(2)
-with left:
-    deals = (
-        filtered.groupby("Spending_Segment", observed=True)["NumDealsPurchases"]
+izquierda, derecha = st.columns(2)
+with izquierda:
+    descuentos = (
+        filtrados.groupby("Spending_Segment", observed=True)["NumDealsPurchases"]
         .mean()
         .rename("Compras con descuento")
         .reset_index()
     )
-    deals_fig = px.bar(
-        deals,
+    figura_descuentos = px.bar(
+        descuentos,
         x="Spending_Segment",
         y="Compras con descuento",
         text="Compras con descuento",
-        color_discrete_sequence=[COLORS["accent"]],
+        color_discrete_sequence=[COLORES["acento"]],
         title="Uso de descuentos por segmento de gasto",
         labels={"Spending_Segment": "Segmento de gasto"},
     )
-    deals_fig.update_traces(texttemplate="%{text:.2f}", textposition="outside")
-    show_figure(deals_fig)
+    figura_descuentos.update_traces(texttemplate="%{text:.2f}", textposition="outside")
+    mostrar_figura(figura_descuentos)
 
-with right:
-    spending_order = ["Gasto bajo", "Gasto medio-bajo", "Gasto medio-alto", "Gasto alto"]
-    heat = pd.crosstab(filtered["Dominant_Channel"], filtered["Spending_Segment"])
-    heat = heat.reindex(columns=spending_order, fill_value=0)
-    heat_fig = go.Figure(
+with derecha:
+    orden_gasto = ["Gasto bajo", "Gasto medio-bajo", "Gasto medio-alto", "Gasto alto"]
+    matriz = pd.crosstab(filtrados["Dominant_Channel"], filtrados["Spending_Segment"])
+    matriz = matriz.reindex(columns=orden_gasto, fill_value=0)
+    figura_matriz = go.Figure(
         go.Heatmap(
-            z=heat.values,
-            x=heat.columns,
-            y=heat.index,
-            colorscale=[[0, "#F0F3F5"], [1, COLORS["primary"]]],
-            text=heat.values,
+            z=matriz.values,
+            x=matriz.columns,
+            y=matriz.index,
+            colorscale=[[0, "#F0F3F5"], [1, COLORES["primario"]]],
+            text=matriz.values,
             texttemplate="%{text}",
             colorbar_title="Clientes",
         )
     )
-    heat_fig.update_layout(title="Canal dominante y segmento de gasto")
-    show_figure(heat_fig)
+    figura_matriz.update_layout(title="Canal dominante y segmento de gasto")
+    mostrar_figura(figura_matriz)
 
-valid_ratio = filtered["Web_Purchase_Visit_Ratio"].dropna()
+razon_valida = filtrados["Web_Purchase_Visit_Ratio"].dropna()
 st.caption(
-    f"Razón mediana compras/visitas web: {valid_ratio.median():.2f}. No es una tasa de "
+    f"Razón mediana compras/visitas web: {razon_valida.median():.2f}. No es una tasa de "
     "conversión real: las compras cubren dos años y las visitas solo el último mes."
 )

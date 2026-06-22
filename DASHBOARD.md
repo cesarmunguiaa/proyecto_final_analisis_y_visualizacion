@@ -4,11 +4,7 @@
 
 El notebook `notebooks/Analitica.ipynb` concentra la limpieza y la ingeniería de variables. Al ejecutarse, exporta `data/ifood_dashboard.csv`. La aplicación de Streamlit no vuelve a limpiar ni redefine clientes; únicamente aplica filtros, agregaciones y fórmulas financieras sobre el archivo exportado.
 
-No se usa `.env`: el proyecto no requiere secretos ni conexiones externas.
-
 ## Variables añadidas para el dashboard
-
-Estas variables no estaban implementadas en la primera versión del EDA y fueron incorporadas al notebook para cubrir la navegación solicitada.
 
 | Variable | Regla | Uso |
 |---|---|---|

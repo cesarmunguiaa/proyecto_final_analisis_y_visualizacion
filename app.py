@@ -1,6 +1,6 @@
 import streamlit as st
 
-from pages.common import inject_css
+from pages.common import inyectar_css
 
 
 st.set_page_config(
@@ -10,12 +10,12 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-inject_css()
+inyectar_css()
 
 st.sidebar.markdown("## iFood Analytics")
 st.sidebar.caption("Análisis histórico · montos en MU")
 
-navigation = st.navigation(
+navegacion = st.navigation(
     [
         st.Page(
             "pages/01_resumen_ejecutivo.py",
@@ -56,4 +56,4 @@ navigation = st.navigation(
     ]
 )
 
-navigation.run()
+navegacion.run()

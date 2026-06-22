@@ -3,25 +3,26 @@ import plotly.express as px
 import streamlit as st
 
 from pages.common import (
-    COLORS,
-    STRATEGIC_FLAGS,
-    empty_guard,
-    finance_summary,
-    format_mu,
-    format_pct,
-    load_data,
-    multiselect_filter,
-    original_campaign_summary,
-    page_header,
-    range_filter,
-    show_figure,
-    strategic_filter,
+    COLORES,
+    BANDERAS_ESTRATEGICAS,
+    validar_no_vacio,
+    resumen_financiero,
+    formatear_mu,
+    formatear_porcentaje,
+    cargar_datos,
+    filtro_multiseleccion,
+    resumen_campana_original,
+    encabezado_pagina,
+    filtro_rango,
+    mostrar_figura,
+    mostrar_metricas,
+    filtro_estrategico,
 )
 
 
-data = load_data()
+datos = cargar_datos()
 
-page_header(
+encabezado_pagina(
     "Centro de decisiones y simulador",
     "¿Qué resultado histórico habría tenido una selección de clientes?",
     "Selecciona criterios disponibles antes de la campaña. El panel recalcula costo, ingreso y "
@@ -29,162 +30,176 @@ page_header(
 )
 
 st.sidebar.markdown("### Criterios de selección")
-selected_segments = st.sidebar.multiselect(
+segmentos_seleccionados = st.sidebar.multiselect(
     "Segmento estratégico",
-    list(STRATEGIC_FLAGS.keys()),
-    key="sim_segments",
+    list(BANDERAS_ESTRATEGICAS.keys()),
+    key="simulador_segmentos",
 )
-selected = multiselect_filter(
-    data,
+seleccionados = filtro_multiseleccion(
+    datos,
     "Income_Segment",
     "Nivel de ingreso",
-    "sim_income",
+    "simulador_ingreso",
     ["Ingreso bajo", "Ingreso medio", "Ingreso alto"],
 )
-selected = multiselect_filter(
-    selected,
+seleccionados = filtro_multiseleccion(
+    seleccionados,
     "Spending_Segment",
     "Nivel de gasto",
-    "sim_spending",
+    "simulador_gasto",
     ["Gasto bajo", "Gasto medio-bajo", "Gasto medio-alto", "Gasto alto"],
 )
-selected = multiselect_filter(
-    selected, "Dominant_Channel", "Canal dominante", "sim_channel"
+seleccionados = filtro_multiseleccion(
+    seleccionados, "Dominant_Channel", "Canal dominante", "simulador_canal"
 )
-selected = multiselect_filter(
-    selected, "Dominant_Category", "Categoría dominante", "sim_category"
+seleccionados = filtro_multiseleccion(
+    seleccionados, "Dominant_Category", "Categoría dominante", "simulador_categoria"
 )
-selected = range_filter(selected, "Age", "Edad", "sim_age", integer=True)
-selected = multiselect_filter(selected, "Education", "Educación", "sim_education")
-selected = multiselect_filter(
-    selected, "Marital_Status_Grouped", "Estado civil", "sim_marital"
+seleccionados = filtro_rango(seleccionados, "Age", "Edad", "simulador_edad", entero=True)
+seleccionados = filtro_multiseleccion(seleccionados, "Education", "Educación", "simulador_educacion")
+seleccionados = filtro_multiseleccion(
+    seleccionados, "Marital_Status_Grouped", "Estado civil", "simulador_estado_civil"
 )
-selected = multiselect_filter(
-    selected, "Family_Segment", "Segmento familiar", "sim_family"
+seleccionados = filtro_multiseleccion(
+    seleccionados, "Family_Segment", "Segmento familiar", "simulador_familia"
 )
-selected = multiselect_filter(
-    selected,
+seleccionados = filtro_multiseleccion(
+    seleccionados,
     "Tenure_Group",
     "Antigüedad",
-    "sim_tenure",
+    "simulador_antiguedad",
     ["Nuevo", "Reciente", "Estable", "Leal"],
 )
-selected = range_filter(selected, "Recency", "Recencia", "sim_recency", integer=True)
-selected = range_filter(
-    selected,
+seleccionados = filtro_rango(
+    seleccionados,
+    "Recency",
+    "Recencia",
+    "simulador_recencia",
+    entero=True,
+)
+seleccionados = filtro_rango(
+    seleccionados,
     "NumDealsPurchases",
     "Compras con descuento",
-    "sim_deals",
-    integer=True,
+    "simulador_descuentos",
+    entero=True,
 )
-selected = range_filter(
-    selected,
+seleccionados = filtro_rango(
+    seleccionados,
     "NumWebVisitsMonth",
     "Visitas web",
-    "sim_visits",
-    integer=True,
+    "simulador_visitas",
+    entero=True,
 )
-selected = range_filter(
-    selected,
+seleccionados = filtro_rango(
+    seleccionados,
     "Accepted_Campaigns_Total",
     "Campañas anteriores aceptadas",
-    "sim_previous",
-    integer=True,
+    "simulador_previas",
+    entero=True,
 )
-complaint = st.sidebar.selectbox(
+queja = st.sidebar.selectbox(
     "Quejas",
     ["Todos", "Con queja", "Sin queja"],
-    key="sim_complaint",
+    key="simulador_queja",
 )
-if complaint == "Con queja":
-    selected = selected[selected["Complain"].eq(1)]
-elif complaint == "Sin queja":
-    selected = selected[selected["Complain"].eq(0)]
-selected = strategic_filter(selected, selected_segments)
-empty_guard(selected)
+if queja == "Con queja":
+    seleccionados = seleccionados[seleccionados["Complain"].eq(1)]
+elif queja == "Sin queja":
+    seleccionados = seleccionados[seleccionados["Complain"].eq(0)]
+seleccionados = filtro_estrategico(seleccionados, segmentos_seleccionados)
+validar_no_vacio(seleccionados)
 
-massive = original_campaign_summary(data)
-scenario = finance_summary(selected)
-category_main = selected["Dominant_Category"].mode().iat[0]
-channel_main = selected["Dominant_Channel"].mode().iat[0]
+masivo = resumen_campana_original(datos)
+escenario = resumen_financiero(seleccionados)
+categoria_principal = seleccionados["Dominant_Category"].mode().iat[0]
+canal_principal = seleccionados["Dominant_Channel"].mode().iat[0]
 
-first_row = st.columns(5)
-first_row[0].metric("Clientes seleccionados", f"{scenario['clients']:,}")
-first_row[1].metric("Aceptaron", f"{scenario['accepted']:,}")
-first_row[2].metric(
-    "Aceptación histórica", format_pct(scenario["acceptance_rate"] * 100, 2)
+mostrar_metricas(
+    [
+        {"titulo": "Clientes seleccionados", "valor": f"{escenario['clientes']:,}"},
+        {"titulo": "Aceptaron", "valor": f"{escenario['aceptaron']:,}"},
+        {
+            "titulo": "Aceptación histórica",
+            "valor": formatear_porcentaje(escenario["tasa_aceptacion"] * 100, 2),
+        },
+        {"titulo": "Costo estimado", "valor": formatear_mu(escenario["costo"])},
+        {"titulo": "Ingreso histórico", "valor": formatear_mu(escenario["ingreso"])},
+        {
+            "titulo": "Balance histórico",
+            "valor": formatear_mu(escenario["balance"]),
+            "delta": formatear_mu(escenario["balance"] - masivo["balance"]),
+        },
+        {
+            "titulo": "ROI histórico",
+            "valor": formatear_porcentaje(escenario["roi"] * 100, 1),
+        },
+        {
+            "titulo": "Gasto promedio",
+            "valor": formatear_mu(seleccionados["Total_Spending"].mean(), 1),
+        },
+        {"titulo": "Categoría principal", "valor": categoria_principal},
+        {"titulo": "Canal principal", "valor": canal_principal},
+    ]
 )
-first_row[3].metric("Costo estimado", format_mu(scenario["cost"]))
-first_row[4].metric("Ingreso histórico", format_mu(scenario["revenue"]))
 
-second_row = st.columns(5)
-second_row[0].metric(
-    "Balance histórico",
-    format_mu(scenario["balance"]),
-    delta=format_mu(scenario["balance"] - massive["balance"]),
-)
-second_row[1].metric("ROI histórico", format_pct(scenario["roi"] * 100, 1))
-second_row[2].metric("Gasto promedio", format_mu(selected["Total_Spending"].mean(), 1))
-second_row[3].metric("Categoría principal", category_main)
-second_row[4].metric("Canal principal", channel_main)
-
-comparison = pd.DataFrame(
+comparacion = pd.DataFrame(
     [
         {
             "Escenario": "Contacto masivo",
-            "Costo": massive["cost"],
-            "Ingreso": massive["revenue"],
-            "Balance": massive["balance"],
+            "Costo": masivo["costo"],
+            "Ingreso": masivo["ingreso"],
+            "Balance": masivo["balance"],
         },
         {
             "Escenario": "Selección actual",
-            "Costo": scenario["cost"],
-            "Ingreso": scenario["revenue"],
-            "Balance": scenario["balance"],
+            "Costo": escenario["costo"],
+            "Ingreso": escenario["ingreso"],
+            "Balance": escenario["balance"],
         },
     ]
 ).melt(id_vars="Escenario", var_name="Concepto", value_name="MU")
 
-left, right = st.columns([1.15, 1])
-with left:
-    comparison_fig = px.bar(
-        comparison,
+izquierda, derecha = st.columns([1.15, 1])
+with izquierda:
+    figura_comparacion = px.bar(
+        comparacion,
         x="Escenario",
         y="MU",
         color="Concepto",
         barmode="group",
         text="MU",
         color_discrete_map={
-            "Costo": COLORS["negative"],
-            "Ingreso": COLORS["positive"],
-            "Balance": COLORS["primary"],
+            "Costo": COLORES["negativo"],
+            "Ingreso": COLORES["positivo"],
+            "Balance": COLORES["primario"],
         },
         title="Contacto masivo frente a la selección",
     )
-    comparison_fig.update_traces(texttemplate="%{text:,.0f}", textposition="outside")
-    show_figure(comparison_fig, height=430, legend_horizontal=True)
+    figura_comparacion.update_traces(texttemplate="%{text:,.0f}", textposition="outside")
+    mostrar_figura(figura_comparacion, altura=430, leyenda_horizontal=True)
 
-with right:
-    grouped_rows = []
-    for segment, subset in selected.groupby("Primary_Strategic_Segment"):
-        segment_finance = finance_summary(subset)
-        grouped_rows.append(
+with derecha:
+    filas_agrupadas = []
+    for segmento, subconjunto in seleccionados.groupby("Primary_Strategic_Segment"):
+        finanzas_segmento = resumen_financiero(subconjunto)
+        filas_agrupadas.append(
             {
-                "Segmento": segment,
-                "Clientes": len(subset),
-                "Gasto promedio": subset["Total_Spending"].mean(),
-                "Aceptación (%)": subset["Response"].mean() * 100,
-                "Balance (MU)": segment_finance["balance"],
-                "Canal": subset["Dominant_Channel"].mode().iat[0],
-                "Categoría": subset["Dominant_Category"].mode().iat[0],
+                "Segmento": segmento,
+                "Clientes": len(subconjunto),
+                "Gasto promedio": subconjunto["Total_Spending"].mean(),
+                "Aceptación (%)": subconjunto["Response"].mean() * 100,
+                "Balance (MU)": finanzas_segmento["balance"],
+                "Canal": subconjunto["Dominant_Channel"].mode().iat[0],
+                "Categoría": subconjunto["Dominant_Category"].mode().iat[0],
             }
         )
-    priority = pd.DataFrame(grouped_rows).sort_values(
+    prioridad = pd.DataFrame(filas_agrupadas).sort_values(
         ["Balance (MU)", "Aceptación (%)"], ascending=False
     )
     st.markdown("#### Grupos priorizados")
     st.dataframe(
-        priority,
+        prioridad,
         hide_index=True,
         width="stretch",
         column_config={
@@ -194,25 +209,25 @@ with right:
         },
     )
 
-quadrant = px.scatter(
-    priority,
+cuadrante = px.scatter(
+    prioridad,
     x="Aceptación (%)",
     y="Gasto promedio",
     size="Clientes",
     color="Balance (MU)",
     text="Segmento",
-    color_continuous_scale=[[0, COLORS["negative"]], [0.5, "#E9ECEF"], [1, COLORS["positive"]]],
+    color_continuous_scale=[[0, COLORES["negativo"]], [0.5, "#E9ECEF"], [1, COLORES["positivo"]]],
     color_continuous_midpoint=0,
     title="Matriz de priorización del escenario",
     labels={"Gasto promedio": "Gasto promedio (MU)"},
 )
-quadrant.add_vline(x=selected["Response"].mean() * 100, line_dash="dot")
-quadrant.add_hline(y=selected["Total_Spending"].mean(), line_dash="dot")
-quadrant.update_traces(textposition="top center")
-show_figure(quadrant, height=450)
+cuadrante.add_vline(x=seleccionados["Response"].mean() * 100, line_dash="dot")
+cuadrante.add_hline(y=seleccionados["Total_Spending"].mean(), line_dash="dot")
+cuadrante.update_traces(textposition="top center")
+mostrar_figura(cuadrante, altura=450)
 
 with st.expander("Ver clientes de la selección"):
-    client_table = selected[
+    tabla_clientes = seleccionados[
         [
             "ID",
             "Age",
@@ -226,7 +241,7 @@ with st.expander("Ver clientes de la selección"):
             "Primary_Strategic_Segment",
         ]
     ].sort_values("Total_Spending", ascending=False)
-    st.dataframe(client_table, hide_index=True, width="stretch", height=420)
+    st.dataframe(tabla_clientes, hide_index=True, width="stretch", height=420)
 
 st.warning(
     "Este simulador es retrospectivo: usa la respuesta observada para evaluar el grupo, pero no "

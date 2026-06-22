@@ -3,23 +3,24 @@ import plotly.express as px
 import streamlit as st
 
 from pages.common import (
-    CAMPAIGN_COLUMNS,
-    COLORS,
-    empty_guard,
-    finance_summary,
-    format_mu,
-    format_pct,
-    load_data,
-    multiselect_filter,
-    page_header,
-    response_filter,
-    show_figure,
+    COLUMNAS_CAMPANAS,
+    COLORES,
+    validar_no_vacio,
+    resumen_financiero,
+    formatear_mu,
+    formatear_porcentaje,
+    cargar_datos,
+    filtro_multiseleccion,
+    encabezado_pagina,
+    filtro_respuesta,
+    mostrar_figura,
+    mostrar_metricas,
 )
 
 
-data = load_data()
+datos = cargar_datos()
 
-page_header(
+encabezado_pagina(
     "Respuesta histórica a campañas",
     "¿Qué tipo de clientes aceptaron campañas y qué tan rentable fue contactarlos?",
     "Esta vista compara respuestas históricas. Los resultados describen lo ocurrido en la muestra; "
@@ -27,78 +28,86 @@ page_header(
 )
 
 st.sidebar.markdown("### Filtros de campañas")
-selected_campaigns = st.sidebar.multiselect(
+campanas_seleccionadas = st.sidebar.multiselect(
     "Campañas mostradas",
-    list(CAMPAIGN_COLUMNS.values()),
-    default=list(CAMPAIGN_COLUMNS.values()),
-    key="campaign_shown",
+    list(COLUMNAS_CAMPANAS.values()),
+    default=list(COLUMNAS_CAMPANAS.values()),
+    key="campanas_mostradas",
 )
-filtered = response_filter(data, "campaign_response")
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_respuesta(datos, "campana_respuesta")
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Spending_Segment",
     "Segmento de gasto",
-    "campaign_spending",
+    "campana_gasto",
     ["Gasto bajo", "Gasto medio-bajo", "Gasto medio-alto", "Gasto alto"],
 )
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Income_Segment",
     "Segmento de ingreso",
-    "campaign_income",
+    "campana_ingreso",
     ["Ingreso bajo", "Ingreso medio", "Ingreso alto"],
 )
-filtered = multiselect_filter(
-    filtered, "Dominant_Channel", "Canal dominante", "campaign_channel"
+filtrados = filtro_multiseleccion(
+    filtrados, "Dominant_Channel", "Canal dominante", "campana_canal"
 )
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Tenure_Group",
     "Segmento de antigüedad",
-    "campaign_tenure",
+    "campana_antiguedad",
     ["Nuevo", "Reciente", "Estable", "Leal"],
 )
-filtered = multiselect_filter(
-    filtered, "Dominant_Category", "Categoría dominante", "campaign_category"
+filtrados = filtro_multiseleccion(
+    filtrados, "Dominant_Category", "Categoría dominante", "campana_categoria"
 )
-complaint = st.sidebar.selectbox(
+queja = st.sidebar.selectbox(
     "Quejas",
     ["Todos", "Con queja", "Sin queja"],
-    key="campaign_complaint",
+    key="campana_queja",
 )
-if complaint == "Con queja":
-    filtered = filtered[filtered["Complain"].eq(1)]
-elif complaint == "Sin queja":
-    filtered = filtered[filtered["Complain"].eq(0)]
-empty_guard(filtered)
+if queja == "Con queja":
+    filtrados = filtrados[filtrados["Complain"].eq(1)]
+elif queja == "Sin queja":
+    filtrados = filtrados[filtrados["Complain"].eq(0)]
+validar_no_vacio(filtrados)
 
-finance = finance_summary(filtered)
-metrics = st.columns(6)
-metrics[0].metric("Clientes", f"{len(filtered):,}")
-metrics[1].metric(
-    "Aceptación última campaña", format_pct(finance["acceptance_rate"] * 100, 2)
+finanzas = resumen_financiero(filtrados)
+mostrar_metricas(
+    [
+        {"titulo": "Clientes", "valor": f"{len(filtrados):,}"},
+        {
+            "titulo": "Aceptación última campaña",
+            "valor": formatear_porcentaje(finanzas["tasa_aceptacion"] * 100, 2),
+        },
+        {"titulo": "Aceptaron última", "valor": f"{finanzas['aceptaron']:,}"},
+        {
+            "titulo": "Aceptaciones previas",
+            "valor": f"{int(filtrados['Accepted_Campaigns_Total'].sum()):,}",
+        },
+        {"titulo": "Balance histórico", "valor": formatear_mu(finanzas["balance"])},
+        {
+            "titulo": "Quejas",
+            "valor": formatear_porcentaje(filtrados["Complain"].mean() * 100, 2),
+        },
+    ]
 )
-metrics[2].metric("Aceptaron última", f"{finance['accepted']:,}")
-metrics[3].metric(
-    "Aceptaciones previas", f"{int(filtered['Accepted_Campaigns_Total'].sum()):,}"
-)
-metrics[4].metric("Balance histórico", format_mu(finance["balance"]))
-metrics[5].metric("Quejas", format_pct(filtered["Complain"].mean() * 100, 2))
 
-campaign_rows = []
-for column, label in CAMPAIGN_COLUMNS.items():
-    if label in selected_campaigns:
-        campaign_rows.append(
+filas_campanas = []
+for columna, etiqueta in COLUMNAS_CAMPANAS.items():
+    if etiqueta in campanas_seleccionadas:
+        filas_campanas.append(
             {
-                "Campaña": label,
-                "Aceptaciones": int(filtered[column].sum()),
-                "Tasa (%)": filtered[column].mean() * 100,
+                "Campaña": etiqueta,
+                "Aceptaciones": int(filtrados[columna].sum()),
+                "Tasa (%)": filtrados[columna].mean() * 100,
             }
         )
-campaign_data = pd.DataFrame(campaign_rows)
-if not campaign_data.empty:
-    campaign_fig = px.bar(
-        campaign_data,
+datos_campanas = pd.DataFrame(filas_campanas)
+if not datos_campanas.empty:
+    figura_campanas = px.bar(
+        datos_campanas,
         x="Campaña",
         y="Tasa (%)",
         text="Tasa (%)",
@@ -106,85 +115,85 @@ if not campaign_data.empty:
         color_discrete_sequence=px.colors.qualitative.Safe,
         title="Tasa de aceptación por campaña",
     )
-    campaign_fig.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-    campaign_fig.update_layout(showlegend=False)
-    show_figure(campaign_fig)
+    figura_campanas.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+    figura_campanas.update_layout(showlegend=False)
+    mostrar_figura(figura_campanas)
 else:
     st.info("Selecciona al menos una campaña para mostrar la comparación.")
 
-def response_by(column: str, label: str):
-    result = (
-        filtered.groupby(column, observed=True)["Response"]
+def respuesta_por(columna: str, etiqueta: str):
+    resultado = (
+        filtrados.groupby(columna, observed=True)["Response"]
         .agg(Clientes="size", Aceptación="mean")
         .reset_index()
     )
-    result["Aceptación (%)"] = result["Aceptación"] * 100
-    fig = px.bar(
-        result,
-        x=column,
+    resultado["Aceptación (%)"] = resultado["Aceptación"] * 100
+    figura = px.bar(
+        resultado,
+        x=columna,
         y="Aceptación (%)",
         text="Aceptación (%)",
-        color=column,
-        title=f"Aceptación por {label}",
-        labels={column: label},
+        color=columna,
+        title=f"Aceptación por {etiqueta}",
+        labels={columna: etiqueta},
     )
-    fig.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-    fig.update_layout(showlegend=False)
-    return fig
+    figura.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+    figura.update_layout(showlegend=False)
+    return figura
 
 
-left, middle, right = st.columns(3)
-with left:
-    show_figure(response_by("Spending_Segment", "gasto"), height=370)
-with middle:
-    show_figure(response_by("Income_Segment", "ingreso"), height=370)
-with right:
-    show_figure(response_by("Dominant_Channel", "canal"), height=370)
+izquierda, centro, derecha = st.columns(3)
+with izquierda:
+    mostrar_figura(respuesta_por("Spending_Segment", "gasto"), altura=370)
+with centro:
+    mostrar_figura(respuesta_por("Income_Segment", "ingreso"), altura=370)
+with derecha:
+    mostrar_figura(respuesta_por("Dominant_Channel", "canal"), altura=370)
 
-left, right = st.columns(2)
-with left:
-    response_box_data = filtered.assign(
-        Respuesta=filtered["Response"].map({0: "No aceptó", 1: "Aceptó"})
+izquierda, derecha = st.columns(2)
+with izquierda:
+    datos_caja_respuesta = filtrados.assign(
+        Respuesta=filtrados["Response"].map({0: "No aceptó", 1: "Aceptó"})
     )
-    response_box = px.box(
-        response_box_data,
+    caja_respuesta = px.box(
+        datos_caja_respuesta,
         x="Respuesta",
         y="Total_Spending",
         color="Respuesta",
         points=False,
-        color_discrete_map={"Aceptó": COLORS["positive"], "No aceptó": COLORS["muted"]},
+        color_discrete_map={"Aceptó": COLORES["positivo"], "No aceptó": COLORES["atenuado"]},
         title="Gasto total según respuesta",
         labels={"Total_Spending": "Gasto total (MU)"},
     )
-    response_box.update_layout(showlegend=False)
-    show_figure(response_box)
+    caja_respuesta.update_layout(showlegend=False)
+    mostrar_figura(caja_respuesta)
 
-with right:
-    financial_rows = []
-    for segment, subset in filtered.groupby("Spending_Segment", observed=True):
-        segment_finance = finance_summary(subset)
-        financial_rows.extend(
+with derecha:
+    filas_financieras = []
+    for segmento, subconjunto in filtrados.groupby("Spending_Segment", observed=True):
+        finanzas_segmento = resumen_financiero(subconjunto)
+        filas_financieras.extend(
             [
-                {"Segmento": segment, "Concepto": "Costo", "MU": segment_finance["cost"]},
-                {"Segmento": segment, "Concepto": "Ingreso", "MU": segment_finance["revenue"]},
-                {"Segmento": segment, "Concepto": "Balance", "MU": segment_finance["balance"]},
+                {"Segmento": segmento, "Concepto": "Costo", "MU": finanzas_segmento["costo"]},
+                {"Segmento": segmento, "Concepto": "Ingreso", "MU": finanzas_segmento["ingreso"]},
+                {"Segmento": segmento, "Concepto": "Balance", "MU": finanzas_segmento["balance"]},
             ]
         )
-    financial_data = pd.DataFrame(financial_rows)
-    finance_fig = px.bar(
-        financial_data,
+    datos_financieros = pd.DataFrame(filas_financieras)
+    figura_finanzas = px.bar(
+        datos_financieros,
         x="Segmento",
         y="MU",
         color="Concepto",
         barmode="group",
         color_discrete_map={
-            "Costo": COLORS["negative"],
-            "Ingreso": COLORS["positive"],
-            "Balance": COLORS["primary"],
+            "Costo": COLORES["negativo"],
+            "Ingreso": COLORES["positivo"],
+            "Balance": COLORES["primario"],
         },
         title="Costo, ingreso y balance por gasto",
     )
-    show_figure(finance_fig, legend_horizontal=True)
+    mostrar_figura(figura_finanzas, leyenda_horizontal=True)
 
 st.caption(
     "Costo = clientes contactados × 3 MU; ingreso = respuestas positivas × 11 MU. "

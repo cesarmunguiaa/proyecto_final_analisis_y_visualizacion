@@ -4,24 +4,25 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from pages.common import (
-    COLORS,
-    STRATEGIC_FLAGS,
-    empty_guard,
-    format_mu,
-    format_pct,
-    load_data,
-    multiselect_filter,
-    page_header,
-    range_filter,
-    show_figure,
-    strategic_filter,
-    strategic_summary,
+    COLORES,
+    BANDERAS_ESTRATEGICAS,
+    validar_no_vacio,
+    formatear_mu,
+    formatear_porcentaje,
+    cargar_datos,
+    filtro_multiseleccion,
+    encabezado_pagina,
+    filtro_rango,
+    mostrar_figura,
+    mostrar_metricas,
+    filtro_estrategico,
+    resumen_estrategico,
 )
 
 
-data = load_data()
+datos = cargar_datos()
 
-page_header(
+encabezado_pagina(
     "Segmentos estratégicos de clientes",
     "¿Qué grupos son más importantes para la estrategia comercial?",
     "Los segmentos convierten patrones descriptivos en cohortes comparables. No son clases "
@@ -29,56 +30,71 @@ page_header(
 )
 
 st.sidebar.markdown("### Filtros de segmentos")
-selected_segments = st.sidebar.multiselect(
+segmentos_seleccionados = st.sidebar.multiselect(
     "Segmento estratégico",
-    list(STRATEGIC_FLAGS.keys()),
-    key="segments_selected",
+    list(BANDERAS_ESTRATEGICAS.keys()),
+    key="segmentos_seleccionados",
 )
-filtered = multiselect_filter(
-    data,
+filtrados = filtro_multiseleccion(
+    datos,
     "Income_Segment",
     "Nivel de ingreso",
-    "segments_income",
+    "segmentos_ingreso",
     ["Ingreso bajo", "Ingreso medio", "Ingreso alto"],
 )
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Spending_Segment",
     "Nivel de gasto",
-    "segments_spending",
+    "segmentos_gasto",
     ["Gasto bajo", "Gasto medio-bajo", "Gasto medio-alto", "Gasto alto"],
 )
-filtered = multiselect_filter(
-    filtered, "Dominant_Channel", "Canal dominante", "segments_channel"
+filtrados = filtro_multiseleccion(
+    filtrados, "Dominant_Channel", "Canal dominante", "segmentos_canal"
 )
-filtered = multiselect_filter(
-    filtered, "Dominant_Category", "Categoría dominante", "segments_category"
+filtrados = filtro_multiseleccion(
+    filtrados, "Dominant_Category", "Categoría dominante", "segmentos_categoria"
 )
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Tenure_Group",
     "Antigüedad",
-    "segments_tenure",
+    "segmentos_antiguedad",
     ["Nuevo", "Reciente", "Estable", "Leal"],
 )
-filtered = range_filter(filtered, "Recency", "Recencia", "segments_recency", integer=True)
-filtered = strategic_filter(filtered, selected_segments)
-empty_guard(filtered)
+filtrados = filtro_rango(filtrados, "Recency", "Recencia", "segmentos_recencia", entero=True)
+filtrados = filtro_estrategico(filtrados, segmentos_seleccionados)
+validar_no_vacio(filtrados)
 
-summary = strategic_summary(filtered)
-metrics = st.columns(5)
-metrics[0].metric("Clientes visibles", f"{len(filtered):,}")
-metrics[1].metric("Gasto promedio", format_mu(filtered["Total_Spending"].mean(), 1))
-metrics[2].metric("Aceptación", format_pct(filtered["Response"].mean() * 100, 2))
-metrics[3].metric("Canal principal", filtered["Dominant_Channel"].mode().iat[0])
-metrics[4].metric("Categoría principal", filtered["Dominant_Category"].mode().iat[0])
+resumen = resumen_estrategico(filtrados)
+mostrar_metricas(
+    [
+        {"titulo": "Clientes visibles", "valor": f"{len(filtrados):,}"},
+        {
+            "titulo": "Gasto promedio",
+            "valor": formatear_mu(filtrados["Total_Spending"].mean(), 1),
+        },
+        {
+            "titulo": "Aceptación",
+            "valor": formatear_porcentaje(filtrados["Response"].mean() * 100, 2),
+        },
+        {
+            "titulo": "Canal principal",
+            "valor": filtrados["Dominant_Channel"].mode().iat[0],
+        },
+        {
+            "titulo": "Categoría principal",
+            "valor": filtrados["Dominant_Category"].mode().iat[0],
+        },
+    ]
+)
 
 st.subheader("Comparación de cohortes")
-display_summary = summary.copy()
-for column in ["Gasto promedio", "Gasto mediano", "Aceptación (%)", "Balance (MU)"]:
-    display_summary[column] = display_summary[column].round(2)
+resumen_mostrado = resumen.copy()
+for columna in ["Gasto promedio", "Gasto mediano", "Aceptación (%)", "Balance (MU)"]:
+    resumen_mostrado[columna] = resumen_mostrado[columna].round(2)
 st.dataframe(
-    display_summary,
+    resumen_mostrado,
     hide_index=True,
     width="stretch",
     column_config={
@@ -91,90 +107,90 @@ st.dataframe(
     },
 )
 
-left, right = st.columns(2)
-with left:
-    spending_fig = px.bar(
-        summary.sort_values("Gasto promedio"),
+izquierda, derecha = st.columns(2)
+with izquierda:
+    figura_gasto = px.bar(
+        resumen.sort_values("Gasto promedio"),
         x="Gasto promedio",
         y="Segmento",
         orientation="h",
         text="Gasto promedio",
         color="Aceptación (%)",
-        color_continuous_scale=[[0, "#DCE5EA"], [1, COLORS["primary"]]],
+        color_continuous_scale=[[0, "#DCE5EA"], [1, COLORES["primario"]]],
         title="Gasto promedio por segmento",
     )
-    spending_fig.update_traces(texttemplate="%{text:,.0f} MU", textposition="outside")
-    show_figure(spending_fig)
+    figura_gasto.update_traces(texttemplate="%{text:,.0f} MU", textposition="outside")
+    mostrar_figura(figura_gasto)
 
-with right:
-    response_fig = px.bar(
-        summary.sort_values("Aceptación (%)"),
+with derecha:
+    figura_respuestas = px.bar(
+        resumen.sort_values("Aceptación (%)"),
         x="Aceptación (%)",
         y="Segmento",
         orientation="h",
         text="Aceptación (%)",
-        color_discrete_sequence=[COLORS["positive"]],
+        color_discrete_sequence=[COLORES["positivo"]],
         title="Aceptación histórica por segmento",
     )
-    response_fig.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-    show_figure(response_fig)
+    figura_respuestas.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+    mostrar_figura(figura_respuestas)
 
 
-def segment_mix(column: str) -> pd.DataFrame:
-    records = []
-    for segment, flag in STRATEGIC_FLAGS.items():
-        subset = filtered[filtered[flag].astype(bool)]
-        if subset.empty:
+def mezcla_segmento(columna: str) -> pd.DataFrame:
+    registros = []
+    for segmento, bandera in BANDERAS_ESTRATEGICAS.items():
+        subconjunto = filtrados[filtrados[bandera].astype(bool)]
+        if subconjunto.empty:
             continue
-        shares = subset[column].value_counts(normalize=True).mul(100)
-        for category, share in shares.items():
-            records.append({"Segmento": segment, "Categoría": category, "Porcentaje": share})
-    return pd.DataFrame(records)
+        participaciones = subconjunto[columna].value_counts(normalize=True).mul(100)
+        for categoria, participacion in participaciones.items():
+            registros.append({"Segmento": segmento, "Categoría": categoria, "Porcentaje": participacion})
+    return pd.DataFrame(registros)
 
 
-left, right = st.columns(2)
-with left:
-    category_mix = segment_mix("Dominant_Category")
-    category_pivot = category_mix.pivot(
+izquierda, derecha = st.columns(2)
+with izquierda:
+    mezcla_categorias = mezcla_segmento("Dominant_Category")
+    tabla_categorias = mezcla_categorias.pivot(
         index="Segmento", columns="Categoría", values="Porcentaje"
     ).fillna(0)
-    category_heat = go.Figure(
+    mapa_categorias = go.Figure(
         go.Heatmap(
-            z=category_pivot.values,
-            x=category_pivot.columns,
-            y=category_pivot.index,
-            colorscale=[[0, "#F2F4F6"], [1, COLORS["primary"]]],
+            z=tabla_categorias.values,
+            x=tabla_categorias.columns,
+            y=tabla_categorias.index,
+            colorscale=[[0, "#F2F4F6"], [1, COLORES["primario"]]],
             colorbar_title="%",
-            text=category_pivot.values,
+            text=tabla_categorias.values,
             texttemplate="%{text:.0f}%",
         )
     )
-    category_heat.update_layout(title="Categoría dominante por segmento")
-    show_figure(category_heat)
+    mapa_categorias.update_layout(title="Categoría dominante por segmento")
+    mostrar_figura(mapa_categorias)
 
-with right:
-    channel_mix = segment_mix("Dominant_Channel")
-    channel_pivot = channel_mix.pivot(
+with derecha:
+    mezcla_canales = mezcla_segmento("Dominant_Channel")
+    tabla_canales = mezcla_canales.pivot(
         index="Segmento", columns="Categoría", values="Porcentaje"
     ).fillna(0)
-    channel_heat = go.Figure(
+    mapa_canales = go.Figure(
         go.Heatmap(
-            z=channel_pivot.values,
-            x=channel_pivot.columns,
-            y=channel_pivot.index,
-            colorscale=[[0, "#F2F4F6"], [1, COLORS["secondary"]]],
+            z=tabla_canales.values,
+            x=tabla_canales.columns,
+            y=tabla_canales.index,
+            colorscale=[[0, "#F2F4F6"], [1, COLORES["secundario"]]],
             colorbar_title="%",
-            text=channel_pivot.values,
+            text=tabla_canales.values,
             texttemplate="%{text:.0f}%",
         )
     )
-    channel_heat.update_layout(title="Canal dominante por segmento")
-    show_figure(channel_heat)
+    mapa_canales.update_layout(title="Canal dominante por segmento")
+    mostrar_figura(mapa_canales)
 
-left, right = st.columns([1.25, 1])
-with left:
-    pca_fig = px.scatter(
-        filtered,
+izquierda, derecha = st.columns([1.25, 1])
+with izquierda:
+    figura_pca = px.scatter(
+        filtrados,
         x="PCA_PC1",
         y="PCA_PC2",
         color="Primary_Strategic_Segment",
@@ -187,11 +203,11 @@ with left:
             "Primary_Strategic_Segment": "Segmento primario",
         },
     )
-    show_figure(pca_fig, height=450, legend_horizontal=True)
+    mostrar_figura(figura_pca, altura=450, leyenda_horizontal=True)
 
-with right:
-    quadrant = px.scatter(
-        summary,
+with derecha:
+    cuadrante = px.scatter(
+        resumen,
         x="Aceptación (%)",
         y="Gasto promedio",
         size="Clientes",
@@ -200,11 +216,11 @@ with right:
         title="Matriz de priorización",
         labels={"Gasto promedio": "Gasto promedio (MU)"},
     )
-    quadrant.add_vline(x=filtered["Response"].mean() * 100, line_dash="dot")
-    quadrant.add_hline(y=filtered["Total_Spending"].mean(), line_dash="dot")
-    quadrant.update_traces(textposition="top center")
-    quadrant.update_layout(showlegend=False)
-    show_figure(quadrant, height=450)
+    cuadrante.add_vline(x=filtrados["Response"].mean() * 100, line_dash="dot")
+    cuadrante.add_hline(y=filtrados["Total_Spending"].mean(), line_dash="dot")
+    cuadrante.update_traces(textposition="top center")
+    cuadrante.update_layout(showlegend=False)
+    mostrar_figura(cuadrante, altura=450)
 
 st.caption(
     "El PCA resume 59.06% de la varianza de seis variables y no prueba la existencia de "

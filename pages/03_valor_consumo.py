@@ -3,23 +3,24 @@ import plotly.express as px
 import streamlit as st
 
 from pages.common import (
-    COLORS,
-    PRODUCT_COLUMNS,
-    empty_guard,
-    format_mu,
-    format_pct,
-    load_data,
-    multiselect_filter,
-    page_header,
-    range_filter,
-    response_filter,
-    show_figure,
+    COLORES,
+    COLUMNAS_PRODUCTOS,
+    validar_no_vacio,
+    formatear_mu,
+    formatear_porcentaje,
+    cargar_datos,
+    filtro_multiseleccion,
+    encabezado_pagina,
+    filtro_rango,
+    filtro_respuesta,
+    mostrar_figura,
+    mostrar_metricas,
 )
 
 
-data = load_data()
+datos = cargar_datos()
 
-page_header(
+encabezado_pagina(
     "Valor y consumo por categorías",
     "¿Cuánto gastan los clientes y en qué productos se concentra el consumo?",
     "El gasto está distribuido de forma desigual. Esta vista distingue el valor total del cliente "
@@ -27,68 +28,86 @@ page_header(
 )
 
 st.sidebar.markdown("### Filtros de valor")
-filtered = multiselect_filter(
-    data,
+filtrados = filtro_multiseleccion(
+    datos,
     "Income_Segment",
     "Segmento de ingreso",
-    "value_income",
+    "valor_ingreso",
     ["Ingreso bajo", "Ingreso medio", "Ingreso alto"],
 )
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Spending_Segment",
     "Segmento de gasto",
-    "value_spending",
+    "valor_gasto",
     ["Gasto bajo", "Gasto medio-bajo", "Gasto medio-alto", "Gasto alto"],
 )
-selected_categories = st.sidebar.multiselect(
+categorias_seleccionadas = st.sidebar.multiselect(
     "Categorías mostradas",
-    list(PRODUCT_COLUMNS.values()),
-    default=list(PRODUCT_COLUMNS.values()),
-    key="value_categories",
+    list(COLUMNAS_PRODUCTOS.values()),
+    default=list(COLUMNAS_PRODUCTOS.values()),
+    key="valor_categorias",
 )
-filtered = range_filter(filtered, "Age", "Edad", "value_age", integer=True)
-filtered = multiselect_filter(filtered, "Education", "Educación", "value_education")
-filtered = multiselect_filter(
-    filtered, "Family_Segment", "Segmento familiar", "value_family"
+filtrados = filtro_rango(filtrados, "Age", "Edad", "valor_edad", entero=True)
+filtrados = filtro_multiseleccion(filtrados, "Education", "Educación", "valor_educacion")
+filtrados = filtro_multiseleccion(
+    filtrados, "Family_Segment", "Segmento familiar", "valor_familia"
 )
-filtered = response_filter(filtered, "value_response")
-empty_guard(filtered)
+filtrados = filtro_respuesta(filtrados, "valor_respuesta")
+validar_no_vacio(filtrados)
 
-product_columns = [
-    column for column, label in PRODUCT_COLUMNS.items() if label in selected_categories
+columnas_productos = [
+    columna for columna, etiqueta in COLUMNAS_PRODUCTOS.items() if etiqueta in categorias_seleccionadas
 ]
-if not product_columns:
-    product_columns = list(PRODUCT_COLUMNS.keys())
+if not columnas_productos:
+    columnas_productos = list(COLUMNAS_PRODUCTOS.keys())
 
-aggregate = filtered[list(PRODUCT_COLUMNS.keys())].sum().sort_values(ascending=False)
-dominant_category = PRODUCT_COLUMNS[aggregate.index[0]]
-metrics = st.columns(6)
-metrics[0].metric("Gasto promedio", format_mu(filtered["Total_Spending"].mean(), 1))
-metrics[1].metric("Gasto mediano", format_mu(filtered["Total_Spending"].median(), 1))
-metrics[2].metric("Gasto máximo", format_mu(filtered["Total_Spending"].max(), 0))
-metrics[3].metric(
-    "Clientes premium",
-    format_pct(filtered["Value_Segment"].eq("Alto valor").mean() * 100, 1),
+agregado = filtrados[list(COLUMNAS_PRODUCTOS.keys())].sum().sort_values(ascending=False)
+categoria_dominante = COLUMNAS_PRODUCTOS[agregado.index[0]]
+mostrar_metricas(
+    [
+        {
+            "titulo": "Gasto promedio",
+            "valor": formatear_mu(filtrados["Total_Spending"].mean(), 1),
+        },
+        {
+            "titulo": "Gasto mediano",
+            "valor": formatear_mu(filtrados["Total_Spending"].median(), 1),
+        },
+        {
+            "titulo": "Gasto máximo",
+            "valor": formatear_mu(filtrados["Total_Spending"].max(), 0),
+        },
+        {
+            "titulo": "Clientes premium",
+            "valor": formatear_porcentaje(
+                filtrados["Value_Segment"].eq("Alto valor").mean() * 100,
+                1,
+            ),
+        },
+        {"titulo": "Categoría principal", "valor": categoria_dominante},
+        {
+            "titulo": "Gasto en vinos",
+            "valor": formatear_mu(filtrados["MntWines"].mean(), 1),
+        },
+    ]
 )
-metrics[4].metric("Categoría principal", dominant_category)
-metrics[5].metric("Gasto en vinos", format_mu(filtered["MntWines"].mean(), 1))
 
-left, right = st.columns(2)
-with left:
-    spending_hist = px.histogram(
-        filtered,
+izquierda, derecha = st.columns(2)
+with izquierda:
+    histograma_gasto = px.histogram(
+        filtrados,
         x="Total_Spending",
         nbins=35,
-        color_discrete_sequence=[COLORS["primary"]],
+        color_discrete_sequence=[COLORES["primario"]],
         title="Distribución del gasto total",
         labels={"Total_Spending": "Gasto total (MU)", "count": "Clientes"},
     )
-    show_figure(spending_hist)
+    mostrar_figura(histograma_gasto)
 
-with right:
-    spending_income = px.box(
-        filtered,
+with derecha:
+    gasto_ingreso = px.box(
+        filtrados,
         x="Income_Segment",
         y="Total_Spending",
         category_orders={
@@ -96,71 +115,71 @@ with right:
         },
         points=False,
         color="Income_Segment",
-        color_discrete_sequence=["#A9C4D0", "#4F8CA5", COLORS["primary"]],
+        color_discrete_sequence=["#A9C4D0", "#4F8CA5", COLORES["primario"]],
         title="Gasto por segmento de ingreso",
         labels={"Income_Segment": "Ingreso", "Total_Spending": "Gasto total (MU)"},
     )
-    spending_income.update_layout(showlegend=False)
-    show_figure(spending_income)
+    gasto_ingreso.update_layout(showlegend=False)
+    mostrar_figura(gasto_ingreso)
 
-category_stats = pd.DataFrame(
+estadisticas_categorias = pd.DataFrame(
     {
-        "Categoría": [PRODUCT_COLUMNS[column] for column in product_columns],
-        "Gasto promedio": [filtered[column].mean() for column in product_columns],
-        "Gasto total": [filtered[column].sum() for column in product_columns],
+        "Categoría": [COLUMNAS_PRODUCTOS[columna] for columna in columnas_productos],
+        "Gasto promedio": [filtrados[columna].mean() for columna in columnas_productos],
+        "Gasto total": [filtrados[columna].sum() for columna in columnas_productos],
     }
 ).sort_values("Gasto total", ascending=False)
-category_stats["Participación"] = category_stats["Gasto total"] / category_stats["Gasto total"].sum()
+estadisticas_categorias["Participación"] = estadisticas_categorias["Gasto total"] / estadisticas_categorias["Gasto total"].sum()
 
-left, right = st.columns(2)
-with left:
-    average_fig = px.bar(
-        category_stats.sort_values("Gasto promedio"),
+izquierda, derecha = st.columns(2)
+with izquierda:
+    figura_promedios = px.bar(
+        estadisticas_categorias.sort_values("Gasto promedio"),
         x="Gasto promedio",
         y="Categoría",
         orientation="h",
         text="Gasto promedio",
-        color_discrete_sequence=[COLORS["secondary"]],
+        color_discrete_sequence=[COLORES["secundario"]],
         title="Gasto promedio por categoría",
     )
-    average_fig.update_traces(texttemplate="%{text:,.1f} MU", textposition="outside")
-    show_figure(average_fig)
+    figura_promedios.update_traces(texttemplate="%{text:,.1f} MU", textposition="outside")
+    mostrar_figura(figura_promedios)
 
-with right:
-    composition_fig = px.pie(
-        category_stats,
+with derecha:
+    figura_composicion = px.pie(
+        estadisticas_categorias,
         names="Categoría",
         values="Gasto total",
         hole=0.55,
         color_discrete_sequence=["#7A243A", "#176B87", "#D18B47", "#769F8D", "#A386B5", "#C6A15B"],
         title="Composición agregada del gasto",
     )
-    composition_fig.update_traces(textinfo="percent+label", textposition="inside")
-    show_figure(composition_fig)
+    figura_composicion.update_traces(textinfo="percent+label", textposition="inside")
+    mostrar_figura(figura_composicion)
 
-long_products = filtered[product_columns].rename(columns=PRODUCT_COLUMNS).melt(
+productos_largos = filtrados[columnas_productos].rename(columns=COLUMNAS_PRODUCTOS).melt(
     var_name="Categoría", value_name="Gasto"
 )
-left, right = st.columns([1.45, 1])
-with left:
-    category_box = px.box(
-        long_products,
+izquierda, derecha = st.columns([1.45, 1])
+with izquierda:
+    caja_categorias = px.box(
+        productos_largos,
         x="Categoría",
         y="Gasto",
         points=False,
-        color_discrete_sequence=[COLORS["accent"]],
+        color_discrete_sequence=[COLORES["acento"]],
         title="Dispersión del gasto por categoría",
         labels={"Gasto": "Gasto (MU)"},
     )
-    show_figure(category_box)
+    mostrar_figura(caja_categorias)
 
-with right:
+with derecha:
     st.markdown("#### Ranking comercial")
-    ranking = category_stats[["Categoría", "Gasto total", "Participación"]].copy()
-    ranking["Gasto total"] = ranking["Gasto total"].round(0)
-    ranking["Participación"] = (ranking["Participación"] * 100).round(2)
+    clasificacion = estadisticas_categorias[["Categoría", "Gasto total", "Participación"]].copy()
+    clasificacion["Gasto total"] = clasificacion["Gasto total"].round(0)
+    clasificacion["Participación"] = (clasificacion["Participación"] * 100).round(2)
     st.dataframe(
-        ranking,
+        clasificacion,
         hide_index=True,
         width="stretch",
         column_config={

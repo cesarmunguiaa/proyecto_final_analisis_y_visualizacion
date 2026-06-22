@@ -1,27 +1,27 @@
-import pandas as pd
 import plotly.express as px
 import streamlit as st
 
 from pages.common import (
-    COLORS,
-    empty_guard,
-    finance_summary,
-    finance_waterfall,
-    format_mu,
-    format_pct,
-    load_data,
-    multiselect_filter,
-    original_campaign_summary,
-    page_header,
-    response_filter,
-    show_figure,
-    strategic_summary,
+    COLORES,
+    validar_no_vacio,
+    resumen_financiero,
+    grafica_cascada_financiera,
+    formatear_mu,
+    formatear_porcentaje,
+    cargar_datos,
+    filtro_multiseleccion,
+    resumen_campana_original,
+    encabezado_pagina,
+    filtro_respuesta,
+    mostrar_figura,
+    mostrar_metricas,
+    resumen_estrategico,
 )
 
 
-data = load_data()
+datos = cargar_datos()
 
-page_header(
+encabezado_pagina(
     "Resumen ejecutivo",
     "¿Cuál es el problema comercial?",
     "La campaña masiva tuvo un balance histórico negativo. El objetivo del dashboard es "
@@ -29,55 +29,66 @@ page_header(
 )
 
 st.sidebar.markdown("### Filtros del resumen")
-filtered = multiselect_filter(
-    data,
+filtrados = filtro_multiseleccion(
+    datos,
     "Spending_Segment",
     "Segmento de gasto",
-    "exec_spending",
+    "resumen_gasto",
     ["Gasto bajo", "Gasto medio-bajo", "Gasto medio-alto", "Gasto alto"],
 )
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Income_Segment",
     "Segmento de ingreso",
-    "exec_income",
+    "resumen_ingreso",
     ["Ingreso bajo", "Ingreso medio", "Ingreso alto"],
 )
-filtered = multiselect_filter(
-    filtered, "Dominant_Channel", "Canal dominante", "exec_channel"
+filtrados = filtro_multiseleccion(
+    filtrados, "Dominant_Channel", "Canal dominante", "resumen_canal"
 )
-filtered = response_filter(filtered, "exec_response")
-filtered = multiselect_filter(
-    filtered,
+filtrados = filtro_respuesta(filtrados, "resumen_respuesta")
+filtrados = filtro_multiseleccion(
+    filtrados,
     "Tenure_Group",
     "Segmento de antigüedad",
-    "exec_tenure",
+    "resumen_antiguedad",
     ["Nuevo", "Reciente", "Estable", "Leal"],
 )
-empty_guard(filtered)
+validar_no_vacio(filtrados)
 
-is_full_sample = filtered.index.equals(data.index)
-finance = original_campaign_summary(data) if is_full_sample else finance_summary(filtered)
-first_row = st.columns(5)
-first_row[0].metric("Clientes analizados", f"{len(filtered):,}")
-first_row[1].metric("Contactos evaluados", f"{finance['clients']:,}")
-first_row[2].metric("Gasto promedio", format_mu(filtered["Total_Spending"].mean(), 1))
-first_row[3].metric("Gasto mediano", format_mu(filtered["Total_Spending"].median(), 1))
-first_row[4].metric(
-    "Tasa de aceptación", format_pct(finance["acceptance_rate"] * 100, 2)
+es_muestra_completa = filtrados.index.equals(datos.index)
+finanzas = resumen_campana_original(datos) if es_muestra_completa else resumen_financiero(filtrados)
+mostrar_metricas(
+    [
+        {"titulo": "Clientes analizados", "valor": f"{len(filtrados):,}"},
+        {"titulo": "Contactos evaluados", "valor": f"{finanzas['clientes']:,}"},
+        {
+            "titulo": "Gasto promedio",
+            "valor": formatear_mu(filtrados["Total_Spending"].mean(), 1),
+        },
+        {
+            "titulo": "Gasto mediano",
+            "valor": formatear_mu(filtrados["Total_Spending"].median(), 1),
+        },
+        {
+            "titulo": "Tasa de aceptación",
+            "valor": formatear_porcentaje(finanzas["tasa_aceptacion"] * 100, 2),
+        },
+        {"titulo": "Aceptaron", "valor": f"{finanzas['aceptaron']:,}"},
+        {"titulo": "Costo histórico", "valor": formatear_mu(finanzas["costo"])},
+        {"titulo": "Ingreso histórico", "valor": formatear_mu(finanzas["ingreso"])},
+        {
+            "titulo": "Balance / ROI",
+            "valor": formatear_mu(finanzas["balance"]),
+            "delta": formatear_porcentaje(finanzas["roi"] * 100, 1),
+            "color_delta": "normal" if finanzas["roi"] >= 0 else "inverse",
+        },
+        {
+            "titulo": "Muestra excluida",
+            "valor": f"{finanzas['clientes'] - len(filtrados):,}",
+        },
+    ]
 )
-
-second_row = st.columns(5)
-second_row[0].metric("Aceptaron", f"{finance['accepted']:,}")
-second_row[1].metric("Costo histórico", format_mu(finance["cost"]))
-second_row[2].metric("Ingreso histórico", format_mu(finance["revenue"]))
-second_row[3].metric(
-    "Balance / ROI",
-    format_mu(finance["balance"]),
-    delta=format_pct(finance["roi"] * 100, 1),
-    delta_color="normal" if finance["roi"] >= 0 else "inverse",
-)
-second_row[4].metric("Muestra excluida", f"{finance['clients'] - len(filtered):,}")
 
 st.caption(
     "Sin filtros, las finanzas corresponden a los 2,240 contactos originales; el gasto y los "
@@ -85,45 +96,45 @@ st.caption(
     "la selección visible."
 )
 
-left, right = st.columns(2)
-with left:
-    response_counts = (
-        filtered["Response"]
+izquierda, derecha = st.columns(2)
+with izquierda:
+    conteo_respuestas = (
+        filtrados["Response"]
         .map({0: "No aceptó", 1: "Aceptó"})
         .value_counts()
         .rename_axis("Respuesta")
         .reset_index(name="Clientes")
     )
-    response_fig = px.bar(
-        response_counts,
+    figura_respuestas = px.bar(
+        conteo_respuestas,
         x="Respuesta",
         y="Clientes",
         color="Respuesta",
         text_auto=",",
-        color_discrete_map={"Aceptó": COLORS["positive"], "No aceptó": COLORS["muted"]},
+        color_discrete_map={"Aceptó": COLORES["positivo"], "No aceptó": COLORES["atenuado"]},
         title="Respuesta a la última campaña",
     )
-    response_fig.update_layout(showlegend=False)
-    show_figure(response_fig)
+    figura_respuestas.update_layout(showlegend=False)
+    mostrar_figura(figura_respuestas)
 
-with right:
-    show_figure(finance_waterfall(filtered, "Resultado histórico del contacto", finance))
+with derecha:
+    mostrar_figura(grafica_cascada_financiera(filtrados, "Resultado histórico del contacto", finanzas))
 
 st.subheader("Segmentos con mayor gasto promedio")
-ranking = strategic_summary(filtered).sort_values("Gasto promedio", ascending=False).head(5)
-ranking_fig = px.bar(
-    ranking.sort_values("Gasto promedio"),
+clasificacion = resumen_estrategico(filtrados).sort_values("Gasto promedio", ascending=False).head(5)
+figura_clasificacion = px.bar(
+    clasificacion.sort_values("Gasto promedio"),
     x="Gasto promedio",
     y="Segmento",
     orientation="h",
     text="Gasto promedio",
     color="Aceptación (%)",
-    color_continuous_scale=[[0, "#DCE5EA"], [1, COLORS["primary"]]],
+    color_continuous_scale=[[0, "#DCE5EA"], [1, COLORES["primario"]]],
     title="Valor promedio y aceptación histórica",
 )
-ranking_fig.update_traces(texttemplate="%{text:,.0f} MU", textposition="outside")
-ranking_fig.update_layout(coloraxis_colorbar_title="Aceptación %")
-show_figure(ranking_fig, height=360)
+figura_clasificacion.update_traces(texttemplate="%{text:,.0f} MU", textposition="outside")
+figura_clasificacion.update_layout(coloraxis_colorbar_title="Aceptación %")
+mostrar_figura(figura_clasificacion, altura=360)
 st.caption(
     "Los segmentos estratégicos son cohortes descriptivas y pueden solaparse; un cliente puede "
     "pertenecer a más de una."

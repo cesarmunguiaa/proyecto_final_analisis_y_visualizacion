@@ -9,20 +9,20 @@ import plotly.graph_objects as go
 import streamlit as st
 
 
-ROOT = Path(__file__).resolve().parents[1]
-DATA_PATH = ROOT / "data" / "ifood_dashboard.csv"
+RAIZ = Path(__file__).resolve().parents[1]
+RUTA_DATOS = RAIZ / "data" / "ifood_dashboard.csv"
 
-COLORS = {
-    "primary": "#7A243A",
-    "secondary": "#176B87",
-    "accent": "#D18B47",
-    "positive": "#287D5A",
-    "negative": "#B23A48",
-    "muted": "#708090",
-    "light": "#EEF2F5",
+COLORES = {
+    "primario": "#7A243A",
+    "secundario": "#176B87",
+    "acento": "#D18B47",
+    "positivo": "#287D5A",
+    "negativo": "#B23A48",
+    "atenuado": "#708090",
+    "claro": "#EEF2F5",
 }
 
-PRODUCT_COLUMNS = OrderedDict(
+COLUMNAS_PRODUCTOS = OrderedDict(
     [
         ("MntWines", "Vinos"),
         ("MntMeatProducts", "Carnes"),
@@ -33,7 +33,7 @@ PRODUCT_COLUMNS = OrderedDict(
     ]
 )
 
-CHANNEL_COLUMNS = OrderedDict(
+COLUMNAS_CANALES = OrderedDict(
     [
         ("NumWebPurchases", "Web"),
         ("NumCatalogPurchases", "Catálogo"),
@@ -41,7 +41,7 @@ CHANNEL_COLUMNS = OrderedDict(
     ]
 )
 
-CAMPAIGN_COLUMNS = OrderedDict(
+COLUMNAS_CAMPANAS = OrderedDict(
     [
         ("AcceptedCmp1", "Campaña 1"),
         ("AcceptedCmp2", "Campaña 2"),
@@ -52,7 +52,7 @@ CAMPAIGN_COLUMNS = OrderedDict(
     ]
 )
 
-STRATEGIC_FLAGS = OrderedDict(
+BANDERAS_ESTRATEGICAS = OrderedDict(
     [
         ("Nuevo de alto valor", "Is_Early_High_Value"),
         ("Premium", "Is_Premium"),
@@ -67,13 +67,13 @@ STRATEGIC_FLAGS = OrderedDict(
 
 
 @st.cache_data(show_spinner=False)
-def load_data() -> pd.DataFrame:
-    if not DATA_PATH.exists():
+def cargar_datos() -> pd.DataFrame:
+    if not RUTA_DATOS.exists():
         raise FileNotFoundError(
             "No existe data/ifood_dashboard.csv. Ejecuta primero notebooks/Analitica.ipynb."
         )
-    data = pd.read_csv(DATA_PATH, parse_dates=["Dt_Customer"])
-    required = {
+    datos = pd.read_csv(RUTA_DATOS, parse_dates=["Dt_Customer"])
+    requeridas = {
         "Income_Segment",
         "Spending_Segment",
         "Dominant_Channel",
@@ -84,33 +84,44 @@ def load_data() -> pd.DataFrame:
         "Campaign_Total_Contacts",
         "Campaign_Total_Accepted",
     }
-    missing = sorted(required.difference(data.columns))
-    if missing:
+    faltantes = sorted(requeridas.difference(datos.columns))
+    if faltantes:
         raise ValueError(
-            "El archivo del dashboard está desactualizado. Faltan: " + ", ".join(missing)
+            "El archivo del dashboard está desactualizado. Faltan: " + ", ".join(faltantes)
         )
-    return data
+    return datos
 
 
-def inject_css() -> None:
+def inyectar_css() -> None:
     st.markdown(
         f"""
         <style>
-        :root {{ --primary: {COLORS['primary']}; --secondary: {COLORS['secondary']}; }}
+        :root {{ --primary: {COLORES['primario']}; --secondary: {COLORES['secundario']}; }}
         .stApp {{ background: #F7F8FA; }}
         .block-container {{ max-width: 1480px; padding-top: 1.8rem; padding-bottom: 3rem; }}
-        h1 {{ color: #1F2933; letter-spacing: -0.03em; }}
+        h1, h1 a {{ color: #1F2933 !important; letter-spacing: -0.03em; }}
         h2, h3 {{ color: #293845; }}
         [data-testid="stMetric"] {{
+            min-height: 145px;
             background: #FFFFFF;
             border: 1px solid #E3E8EC;
             border-radius: 12px;
-            padding: 0.9rem 1rem;
+            padding: 1.15rem 1.3rem;
             box-shadow: 0 3px 12px rgba(27, 39, 51, 0.04);
         }}
         [data-testid="stMetricLabel"] {{ color: #5D6B78; }}
+        [data-testid="stMetricLabel"] p {{
+            font-size: 1rem;
+            white-space: normal;
+            overflow: visible;
+            text-overflow: clip;
+        }}
+        [data-testid="stMetricValue"] {{
+            color: #2E3440 !important;
+            font-size: 2.35rem;
+        }}
         [data-testid="stSidebar"] {{ border-right: 1px solid #E4E8EC; }}
-        .story-box {{
+        .caja-historia {{
             background: #FFFFFF;
             border-left: 4px solid var(--primary);
             border-radius: 8px;
@@ -118,202 +129,223 @@ def inject_css() -> None:
             margin: 0.2rem 0 1.2rem 0;
             color: #35414B;
         }}
-        .small-note {{ color: #667784; font-size: 0.88rem; }}
+        .nota-pequena {{ color: #667784; font-size: 0.88rem; }}
         </style>
         """,
         unsafe_allow_html=True,
     )
 
 
-def page_header(title: str, question: str, story: str) -> None:
-    st.title(title)
-    st.caption(question)
-    st.markdown(f'<div class="story-box">{story}</div>', unsafe_allow_html=True)
+def encabezado_pagina(titulo: str, pregunta: str, historia: str) -> None:
+    st.title(titulo)
+    st.caption(pregunta)
+    st.markdown(f'<div class="caja-historia">{historia}</div>', unsafe_allow_html=True)
 
 
-def format_mu(value: float, decimals: int = 0) -> str:
-    if pd.isna(value):
+def formatear_mu(valor: float, decimales: int = 0) -> str:
+    if pd.isna(valor):
         return "—"
-    return f"{value:,.{decimals}f} MU"
+    return f"{valor:,.{decimales}f} MU"
 
 
-def format_pct(value: float, decimals: int = 1) -> str:
-    if pd.isna(value):
+def formatear_porcentaje(valor: float, decimales: int = 1) -> str:
+    if pd.isna(valor):
         return "—"
-    return f"{value:.{decimals}f}%"
+    return f"{valor:.{decimales}f}%"
 
 
-def finance_summary(data: pd.DataFrame) -> dict[str, float]:
-    clients = len(data)
-    accepted = int(data["Response"].sum()) if clients else 0
-    contact_cost = float(data["Z_CostContact"].iloc[0]) if clients else 3.0
-    response_revenue = float(data["Z_Revenue"].iloc[0]) if clients else 11.0
-    cost = clients * contact_cost
-    revenue = accepted * response_revenue
-    balance = revenue - cost
+def mostrar_metricas(metricas: list[dict], por_fila: int = 3) -> None:
+    for inicio in range(0, len(metricas), por_fila):
+        columnas = st.columns(por_fila)
+        for columna, metrica in zip(columnas, metricas[inicio : inicio + por_fila]):
+            columna.metric(
+                metrica["titulo"],
+                metrica["valor"],
+                delta=metrica.get("delta"),
+                delta_color=metrica.get("color_delta", "normal"),
+                help=metrica.get("ayuda"),
+            )
+
+
+def resumen_financiero(datos: pd.DataFrame) -> dict[str, float]:
+    clientes = len(datos)
+    aceptaron = int(datos["Response"].sum()) if clientes else 0
+    costo_contacto = float(datos["Z_CostContact"].iloc[0]) if clientes else 3.0
+    ingreso_respuesta = float(datos["Z_Revenue"].iloc[0]) if clientes else 11.0
+    costo = clientes * costo_contacto
+    ingreso = aceptaron * ingreso_respuesta
+    balance = ingreso - costo
     return {
-        "clients": clients,
-        "accepted": accepted,
-        "acceptance_rate": accepted / clients if clients else np.nan,
-        "cost": cost,
-        "revenue": revenue,
+        "clientes": clientes,
+        "aceptaron": aceptaron,
+        "tasa_aceptacion": aceptaron / clientes if clientes else np.nan,
+        "costo": costo,
+        "ingreso": ingreso,
         "balance": balance,
-        "roi": balance / cost if cost else np.nan,
+        "roi": balance / costo if costo else np.nan,
     }
 
 
-def original_campaign_summary(data: pd.DataFrame) -> dict[str, float]:
-    contacts = int(data["Campaign_Total_Contacts"].iloc[0])
-    accepted = int(data["Campaign_Total_Accepted"].iloc[0])
-    contact_cost = float(data["Z_CostContact"].iloc[0])
-    response_revenue = float(data["Z_Revenue"].iloc[0])
-    cost = contacts * contact_cost
-    revenue = accepted * response_revenue
-    balance = revenue - cost
+def resumen_campana_original(datos: pd.DataFrame) -> dict[str, float]:
+    contactos = int(datos["Campaign_Total_Contacts"].iloc[0])
+    aceptaron = int(datos["Campaign_Total_Accepted"].iloc[0])
+    costo_contacto = float(datos["Z_CostContact"].iloc[0])
+    ingreso_respuesta = float(datos["Z_Revenue"].iloc[0])
+    costo = contactos * costo_contacto
+    ingreso = aceptaron * ingreso_respuesta
+    balance = ingreso - costo
     return {
-        "clients": contacts,
-        "accepted": accepted,
-        "acceptance_rate": accepted / contacts,
-        "cost": cost,
-        "revenue": revenue,
+        "clientes": contactos,
+        "aceptaron": aceptaron,
+        "tasa_aceptacion": aceptaron / contactos,
+        "costo": costo,
+        "ingreso": ingreso,
         "balance": balance,
-        "roi": balance / cost,
+        "roi": balance / costo,
     }
 
 
-def style_figure(fig, height: int = 390, legend_horizontal: bool = False):
-    fig.update_layout(
+def estilizar_figura(figura, altura: int = 390, leyenda_horizontal: bool = False):
+    figura.update_layout(
         template="plotly_white",
-        height=height,
+        height=altura,
         margin=dict(l=20, r=20, t=55, b=30),
         font=dict(family="Arial", color="#33414C"),
         title_font=dict(size=17),
         hoverlabel=dict(bgcolor="white"),
     )
-    if legend_horizontal:
-        fig.update_layout(
+    if leyenda_horizontal:
+        figura.update_layout(
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
-    return fig
+    return figura
 
 
-def show_figure(fig, height: int = 390, legend_horizontal: bool = False) -> None:
+def mostrar_figura(figura, altura: int = 390, leyenda_horizontal: bool = False) -> None:
     st.plotly_chart(
-        style_figure(fig, height=height, legend_horizontal=legend_horizontal),
+        estilizar_figura(
+            figura,
+            altura=altura,
+            leyenda_horizontal=leyenda_horizontal,
+        ),
         width="stretch",
         config={"displayModeBar": False},
     )
 
 
-def multiselect_filter(
-    data: pd.DataFrame,
-    column: str,
-    label: str,
-    key: str,
-    options: list | None = None,
+def filtro_multiseleccion(
+    datos: pd.DataFrame,
+    columna: str,
+    etiqueta: str,
+    clave: str,
+    opciones: list | None = None,
 ) -> pd.DataFrame:
-    available = options or sorted(data[column].dropna().unique().tolist())
-    selected = st.sidebar.multiselect(label, available, key=key)
-    return data[data[column].isin(selected)] if selected else data
+    disponibles = opciones or sorted(datos[columna].dropna().unique().tolist())
+    seleccionados = st.sidebar.multiselect(etiqueta, disponibles, key=clave)
+    return datos[datos[columna].isin(seleccionados)] if seleccionados else datos
 
 
-def range_filter(
-    data: pd.DataFrame,
-    column: str,
-    label: str,
-    key: str,
-    integer: bool = False,
+def filtro_rango(
+    datos: pd.DataFrame,
+    columna: str,
+    etiqueta: str,
+    clave: str,
+    entero: bool = False,
 ) -> pd.DataFrame:
-    series = data[column].dropna()
-    if series.empty:
-        return data
-    minimum = int(series.min()) if integer else float(series.min())
-    maximum = int(series.max()) if integer else float(series.max())
-    if minimum == maximum:
-        st.sidebar.caption(f"{label}: {minimum}")
-        return data
-    step = 1 if integer else max((maximum - minimum) / 100, 1.0)
-    selected = st.sidebar.slider(
-        label,
-        min_value=minimum,
-        max_value=maximum,
-        value=(minimum, maximum),
-        step=step,
-        key=key,
+    serie = datos[columna].dropna()
+    if serie.empty:
+        return datos
+    minimo = int(serie.min()) if entero else float(serie.min())
+    maximo = int(serie.max()) if entero else float(serie.max())
+    if minimo == maximo:
+        st.sidebar.caption(f"{etiqueta}: {minimo}")
+        return datos
+    paso = 1 if entero else max((maximo - minimo) / 100, 1.0)
+    seleccion = st.sidebar.slider(
+        etiqueta,
+        min_value=minimo,
+        max_value=maximo,
+        value=(minimo, maximo),
+        step=paso,
+        key=clave,
     )
-    return data[data[column].between(selected[0], selected[1])]
+    return datos[datos[columna].between(seleccion[0], seleccion[1])]
 
 
-def response_filter(data: pd.DataFrame, key: str) -> pd.DataFrame:
-    selection = st.sidebar.selectbox(
+def filtro_respuesta(datos: pd.DataFrame, clave: str) -> pd.DataFrame:
+    seleccion = st.sidebar.selectbox(
         "Respuesta a la última campaña",
         ["Todos", "Aceptó", "No aceptó"],
-        key=key,
+        key=clave,
     )
-    if selection == "Aceptó":
-        return data[data["Response"].eq(1)]
-    if selection == "No aceptó":
-        return data[data["Response"].eq(0)]
-    return data
+    if seleccion == "Aceptó":
+        return datos[datos["Response"].eq(1)]
+    if seleccion == "No aceptó":
+        return datos[datos["Response"].eq(0)]
+    return datos
 
 
-def strategic_filter(data: pd.DataFrame, selected: list[str]) -> pd.DataFrame:
-    if not selected:
-        return data
-    mask = pd.Series(False, index=data.index)
-    for segment in selected:
-        mask |= data[STRATEGIC_FLAGS[segment]].astype(bool)
-    return data[mask]
+def filtro_estrategico(datos: pd.DataFrame, seleccionados: list[str]) -> pd.DataFrame:
+    if not seleccionados:
+        return datos
+    mascara = pd.Series(False, index=datos.index)
+    for segmento in seleccionados:
+        mascara |= datos[BANDERAS_ESTRATEGICAS[segmento]].astype(bool)
+    return datos[mascara]
 
 
-def strategic_summary(data: pd.DataFrame) -> pd.DataFrame:
-    rows: list[dict] = []
-    for segment, flag in STRATEGIC_FLAGS.items():
-        subset = data[data[flag].astype(bool)]
-        if subset.empty:
+def resumen_estrategico(datos: pd.DataFrame) -> pd.DataFrame:
+    filas: list[dict] = []
+    for segmento, bandera in BANDERAS_ESTRATEGICAS.items():
+        subconjunto = datos[datos[bandera].astype(bool)]
+        if subconjunto.empty:
             continue
-        financial = finance_summary(subset)
-        rows.append(
+        finanzas = resumen_financiero(subconjunto)
+        filas.append(
             {
-                "Segmento": segment,
-                "Clientes": len(subset),
-                "Gasto promedio": subset["Total_Spending"].mean(),
-                "Gasto mediano": subset["Total_Spending"].median(),
-                "Aceptación (%)": subset["Response"].mean() * 100,
-                "Balance (MU)": financial["balance"],
-                "Canal principal": subset["Dominant_Channel"].mode().iat[0],
-                "Categoría principal": subset["Dominant_Category"].mode().iat[0],
-                "Antigüedad promedio": subset["Customer_Tenure_Days"].mean(),
-                "Recencia promedio": subset["Recency"].mean(),
+                "Segmento": segmento,
+                "Clientes": len(subconjunto),
+                "Gasto promedio": subconjunto["Total_Spending"].mean(),
+                "Gasto mediano": subconjunto["Total_Spending"].median(),
+                "Aceptación (%)": subconjunto["Response"].mean() * 100,
+                "Balance (MU)": finanzas["balance"],
+                "Canal principal": subconjunto["Dominant_Channel"].mode().iat[0],
+                "Categoría principal": subconjunto["Dominant_Category"].mode().iat[0],
+                "Antigüedad promedio": subconjunto["Customer_Tenure_Days"].mean(),
+                "Recencia promedio": subconjunto["Recency"].mean(),
             }
         )
-    return pd.DataFrame(rows)
+    return pd.DataFrame(filas)
 
 
-def empty_guard(data: pd.DataFrame) -> None:
-    if data.empty:
+def validar_no_vacio(datos: pd.DataFrame) -> None:
+    if datos.empty:
         st.warning("No hay clientes que cumplan la combinación actual de filtros.")
         st.stop()
 
 
-def finance_waterfall(data: pd.DataFrame, title: str, summary: dict[str, float] | None = None):
-    finance = summary or finance_summary(data)
-    fig = go.Figure(
+def grafica_cascada_financiera(
+    datos: pd.DataFrame,
+    titulo: str,
+    resumen: dict[str, float] | None = None,
+):
+    finanzas = resumen or resumen_financiero(datos)
+    figura = go.Figure(
         go.Waterfall(
             x=["Costo", "Ingreso", "Balance"],
-            y=[-finance["cost"], finance["revenue"], finance["balance"]],
+            y=[-finanzas["costo"], finanzas["ingreso"], finanzas["balance"]],
             measure=["relative", "relative", "total"],
             text=[
-                format_mu(-finance["cost"]),
-                format_mu(finance["revenue"]),
-                format_mu(finance["balance"]),
+                formatear_mu(-finanzas["costo"]),
+                formatear_mu(finanzas["ingreso"]),
+                formatear_mu(finanzas["balance"]),
             ],
             textposition="outside",
             connector={"line": {"color": "#A7B1BA"}},
-            increasing={"marker": {"color": COLORS["positive"]}},
-            decreasing={"marker": {"color": COLORS["negative"]}},
-            totals={"marker": {"color": COLORS["primary"]}},
+            increasing={"marker": {"color": COLORES["positivo"]}},
+            decreasing={"marker": {"color": COLORES["negativo"]}},
+            totals={"marker": {"color": COLORES["primario"]}},
         )
     )
-    fig.update_layout(title=title, yaxis_title="MU", showlegend=False)
-    return fig
+    figura.update_layout(title=titulo, yaxis_title="MU", showlegend=False)
+    return figura
