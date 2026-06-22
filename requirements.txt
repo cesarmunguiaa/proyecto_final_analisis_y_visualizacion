@@ -1,0 +1,7 @@
+pandas
+numpy
+matplotlib
+seaborn
+jupyter
+streamlit>=1.36
+plotly>=5.20

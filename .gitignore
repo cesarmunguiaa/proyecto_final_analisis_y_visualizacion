@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+data/ifood_dashboard.csv
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
