@@ -92,7 +92,7 @@ def cargar_datos() -> pd.DataFrame:
     return datos
 
 
-def inyectar_css() -> None:
+def inject_css() -> None:
     st.markdown(
         f"""
         <style>

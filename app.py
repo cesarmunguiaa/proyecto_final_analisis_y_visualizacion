@@ -1,6 +1,6 @@
 import streamlit as st
 
-from pages.common import inyectar_css
+from pages.common import inject_css
 
 
 st.set_page_config(
@@ -10,7 +10,7 @@ st.set_page_config(
     initial_sidebar_state="expanded",
 )
 
-inyectar_css()
+inject_css()
 
 st.sidebar.markdown("## iFood Analytics")
 st.sidebar.caption("Análisis histórico · montos en MU")
