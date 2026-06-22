@@ -156,5 +156,5 @@ with derecha:
 
 st.caption(
     "La edad se calcula con respecto al 29 de junio de 2014, fecha máxima observada en "
-    "Dt_Customer. Las categorías YOLO y Absurd se agrupan como ‘Otro / no válido’."
+    
 )
