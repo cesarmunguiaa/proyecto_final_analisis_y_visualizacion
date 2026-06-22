@@ -21,7 +21,7 @@ El notebook `notebooks/Analitica.ipynb` concentra la limpieza y la ingeniería d
 
 ## Segmentos estratégicos
 
-Los segmentos son cohortes que pueden solaparse. Las columnas booleanas permiten medir cada grupo sin obligar a que un cliente pertenezca a una sola clase.
+Los segmentos son grupos de clientes que pueden solaparse. Las columnas booleanas permiten medir cada grupo sin obligar a que un cliente pertenezca a una sola clase.
 
 | Etiqueta | Columna | Definición actual |
 |---|---|---|
@@ -34,7 +34,7 @@ Los segmentos son cohortes que pueden solaparse. Las columnas booleanas permiten
 | Nuevo de alto valor | `Is_Early_High_Value` | Mitad más reciente (`Nuevo` o `Reciente`) y gasto desde el percentil 95: 1,767.2 MU. |
 | Inactivo o frío | `Is_Cold` | `Recency` de al menos 74 días, percentil 75 actual. |
 
-`Strategic_Tags` concatena todas las cohortes de cada cliente. `Primary_Strategic_Segment` asigna una sola etiqueta únicamente para colorear el PCA y construir tablas sin duplicados. Su prioridad es: nuevo de alto valor, premium, alto ingreso/bajo gasto, web curioso, inactivo, leal, sensible a descuentos, multicanal y base general. Las comparaciones analíticas de la página 6 usan las banderas solapadas, no esta etiqueta primaria.
+`Strategic_Tags` concatena todos los segmentos estratégicos de cada cliente. `Primary_Strategic_Segment` asigna una sola etiqueta únicamente para colorear el PCA y construir tablas sin duplicados. Su prioridad es: nuevo de alto valor, premium, alto ingreso/bajo gasto, web curioso, inactivo, leal, sensible a descuentos, multicanal y base general. Las comparaciones analíticas de la página 6 usan las banderas solapadas, no esta etiqueta primaria.
 
 ## Cálculos dinámicos
 
@@ -63,5 +63,5 @@ Sin filtros, el resumen ejecutivo y la comparación masiva usan los 2,240 contac
 
 - El simulador reconstruye lo que habría ocurrido históricamente en el subconjunto; no predice una campaña futura.
 - `Response` no se ofrece como criterio en el simulador, porque seleccionar clientes por el resultado que se desea evaluar produciría fuga de información.
-- Las cohortes se definen con cuantiles de esta muestra; sus umbrales deben recalcularse si cambia el dataset.
+- Los segmentos se definen con cuantiles de esta muestra; sus umbrales deben recalcularse si cambia el dataset.
 - Las asociaciones de gasto, canales, familia y respuesta no demuestran causalidad.

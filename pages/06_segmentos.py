@@ -25,7 +25,7 @@ datos = cargar_datos()
 encabezado_pagina(
     "Segmentos estratégicos de clientes",
     "¿Qué grupos son más importantes para la estrategia comercial?",
-    "Los segmentos convierten patrones descriptivos en cohortes comparables. No son clases "
+    "Los segmentos convierten patrones descriptivos en grupos comparables. No son clases "
     "exclusivas: una persona puede ser, por ejemplo, premium, multicanal y leal al mismo tiempo.",
 )
 
@@ -89,7 +89,7 @@ mostrar_metricas(
     ]
 )
 
-st.subheader("Comparación de cohortes")
+st.subheader("Comparación de segmentos")
 resumen_mostrado = resumen.copy()
 for columna in ["Gasto promedio", "Gasto mediano", "Aceptación (%)", "Balance (MU)"]:
     resumen_mostrado[columna] = resumen_mostrado[columna].round(2)
@@ -225,5 +225,5 @@ with derecha:
 st.caption(
     "El PCA resume 59.06% de la varianza de seis variables y no prueba la existencia de "
     "clusters. El segmento primario usa una prioridad documentada solo para colorear puntos; "
-    "las métricas de cohortes conservan el solapamiento real."
+    "las métricas de los segmentos conservan el solapamiento real."
 )

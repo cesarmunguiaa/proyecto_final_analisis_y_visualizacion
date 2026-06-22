@@ -153,6 +153,6 @@ figura_clasificacion.update_traces(texttemplate="%{text:,.0f} MU", textposition=
 figura_clasificacion.update_layout(coloraxis_colorbar_title="Aceptación %")
 mostrar_figura(figura_clasificacion, altura=360)
 st.caption(
-    "Los segmentos estratégicos son cohortes descriptivas y pueden solaparse; un cliente puede "
+    "Los segmentos estratégicos son grupos descriptivos y pueden solaparse; un cliente puede "
     "pertenecer a más de una."
 )
