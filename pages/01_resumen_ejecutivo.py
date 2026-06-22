@@ -5,7 +5,7 @@ from pages.common import (
     COLORES,
     validar_no_vacio,
     resumen_financiero,
-    grafica_cascada_financiera,
+    grafica_resultado_financiero,
     formatear_mu,
     formatear_porcentaje,
     cargar_datos,
@@ -110,15 +110,32 @@ with izquierda:
         x="Respuesta",
         y="Clientes",
         color="Respuesta",
-        text_auto=",",
+        category_orders={"Respuesta": ["No aceptó", "Aceptó"]},
         color_discrete_map={"Aceptó": COLORES["positivo"], "No aceptó": COLORES["atenuado"]},
         title="Respuesta a la última campaña",
+        labels={"Clientes": "Número de clientes"},
     )
-    figura_respuestas.update_layout(showlegend=False)
+    figura_respuestas.update_traces(
+        texttemplate="%{y:,.0f}",
+        textposition="outside",
+        cliponaxis=False,
+        hovertemplate="%{x}: %{y:,.0f} clientes<extra></extra>",
+    )
+    figura_respuestas.update_layout(
+        showlegend=False,
+        yaxis_rangemode="tozero",
+        yaxis_tickformat=",",
+    )
     mostrar_figura(figura_respuestas)
 
 with derecha:
-    mostrar_figura(grafica_cascada_financiera(filtrados, "Resultado histórico del contacto", finanzas))
+    mostrar_figura(
+        grafica_resultado_financiero(
+            filtrados,
+            "Resultado histórico del contacto",
+            finanzas,
+        )
+    )
 
 st.subheader("Segmentos con mayor gasto promedio")
 clasificacion = resumen_estrategico(filtrados).sort_values("Gasto promedio", ascending=False).head(5)

@@ -324,28 +324,33 @@ def validar_no_vacio(datos: pd.DataFrame) -> None:
         st.stop()
 
 
-def grafica_cascada_financiera(
+def grafica_resultado_financiero(
     datos: pd.DataFrame,
     titulo: str,
     resumen: dict[str, float] | None = None,
 ):
     finanzas = resumen or resumen_financiero(datos)
+    conceptos = ["Costo", "Ingreso", "Balance"]
+    valores = [-finanzas["costo"], finanzas["ingreso"], finanzas["balance"]]
+    colores = [COLORES["negativo"], COLORES["positivo"], COLORES["primario"]]
     figura = go.Figure(
-        go.Waterfall(
-            x=["Costo", "Ingreso", "Balance"],
-            y=[-finanzas["costo"], finanzas["ingreso"], finanzas["balance"]],
-            measure=["relative", "relative", "total"],
-            text=[
-                formatear_mu(-finanzas["costo"]),
-                formatear_mu(finanzas["ingreso"]),
-                formatear_mu(finanzas["balance"]),
-            ],
+        go.Bar(
+            x=conceptos,
+            y=valores,
+            marker_color=colores,
+            text=[formatear_mu(valor) for valor in valores],
             textposition="outside",
-            connector={"line": {"color": "#A7B1BA"}},
-            increasing={"marker": {"color": COLORES["positivo"]}},
-            decreasing={"marker": {"color": COLORES["negativo"]}},
-            totals={"marker": {"color": COLORES["primario"]}},
+            cliponaxis=False,
+            hovertemplate="%{x}: %{y:,.0f} MU<extra></extra>",
         )
     )
-    figura.update_layout(title=titulo, yaxis_title="MU", showlegend=False)
+    limite = max(abs(valor) for valor in valores) * 1.18
+    figura.update_layout(
+        title=titulo,
+        yaxis_title="MU",
+        showlegend=False,
+        yaxis_range=[-limite, limite],
+        yaxis_tickformat=",",
+    )
+    figura.add_hline(y=0, line_color="#8795A1", line_width=1)
     return figura
